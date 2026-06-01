@@ -78,6 +78,7 @@ export const getKpiMatrixByProject = pick(sb.getKpiMatrixByProject, mem.getKpiMa
 
 export const createReport = pick(sb.createReport, mem.createReport);
 export const getReportByProject = pick(sb.getReportByProject, mem.getReportByProject);
+export const listReportsByProject = pick(sb.listReportsByProject, mem.listReportsByProject);
 export const getReportByShareToken = pick(sb.getReportByShareToken, mem.getReportByShareToken);
 export const getReport = pick(sb.getReport, mem.getReport);
 export const updateReportAnnotations = pick(sb.updateReportAnnotations, mem.updateReportAnnotations);

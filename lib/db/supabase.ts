@@ -476,28 +476,45 @@ export async function createReport(input: {
   kpi_matrix_id: string;
   annotations?: AnnotationMap;
 }): Promise<Report> {
-  return must(
-    await sb()
-      .from("reports")
-      .insert({
-        project_id: input.project_id,
-        kpi_matrix_id: input.kpi_matrix_id,
-        annotations: input.annotations ?? {},
-      })
-      .select("*")
-      .single(),
-  ) as Report;
+  // Next version = max existing + 1 (best-effort; falls back to 1 if the column is absent).
+  let version = 1;
+  try {
+    const { data } = await sb().from("reports").select("version").eq("project_id", input.project_id);
+    const versions = ((data as { version?: number }[]) ?? []).map((r) => r.version ?? 0);
+    version = (versions.length ? Math.max(...versions) : 0) + 1;
+  } catch {
+    /* version column may not exist pre-migration 0006 */
+  }
+  const full = {
+    project_id: input.project_id,
+    kpi_matrix_id: input.kpi_matrix_id,
+    annotations: input.annotations ?? {},
+    version,
+  };
+  const res = await sb().from("reports").insert(full).select("*").single();
+  if (!res.error) return res.data as Report;
+  if (/version/.test(res.error.message)) {
+    const { version: _v, ...base } = full;
+    return must(await sb().from("reports").insert(base).select("*").single()) as Report;
+  }
+  throw new Error(`Supabase: ${res.error.message}`);
 }
 
-export async function getReportByProject(projectId: string): Promise<Report | undefined> {
-  const { data } = await sb()
-    .from("reports")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return (data as Report) ?? undefined;
+export async function getReportByProject(projectId: string, version?: number): Promise<Report | undefined> {
+  let q = sb().from("reports").select("*").eq("project_id", projectId);
+  if (version != null) q = q.eq("version", version);
+  // Newest version first (fall back to created_at when version is absent).
+  const { data } = await q.order("created_at", { ascending: false }).limit(version != null ? 1 : 50);
+  const rows = (data as Report[]) ?? [];
+  if (version != null) return rows[0];
+  // Pick the highest version (or newest) when no explicit version requested.
+  return rows.sort((a, b) => (b.version ?? 0) - (a.version ?? 0) || b.created_at.localeCompare(a.created_at))[0];
+}
+
+export async function listReportsByProject(projectId: string): Promise<Report[]> {
+  const { data } = await sb().from("reports").select("*").eq("project_id", projectId);
+  const rows = (data as Report[]) ?? [];
+  return rows.sort((a, b) => (b.version ?? 0) - (a.version ?? 0) || b.created_at.localeCompare(a.created_at));
 }
 
 export async function getReportByShareToken(token: string): Promise<Report | undefined> {

@@ -24,6 +24,8 @@ export interface Report {
   pdf_path: string | null;
   /** unique token powering the public, no-login shareable link. */
   share_token: string;
+  /** report version (spec v2 §3); increments each regenerate. Optional pre-migration 0006. */
+  version?: number;
   created_at: string;
 }
 

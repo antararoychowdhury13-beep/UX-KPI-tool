@@ -18,6 +18,7 @@ export function ReportDashboard({
   shareToken,
   reportId,
   annotations,
+  version = 1,
   editable = false,
 }: {
   project: Project;
@@ -29,6 +30,7 @@ export function ReportDashboard({
   shareToken?: string;
   reportId?: string;
   annotations?: AnnotationMap;
+  version?: number;
   editable?: boolean;
 }) {
   // Prefer the composite UX score; fall back to a KPI average (works pre-migration 0004).
@@ -57,7 +59,7 @@ export function ReportDashboard({
     <>
       <div className="report-hero">
         <div>
-          <div className="rh-tag">UX Impact Report</div>
+          <div className="rh-tag">UX Impact Report · v{version}</div>
           <div className="rh-title">{project.name}</div>
           <div className="rh-sub">
             {project.description || "Redesign analysis"} · {personas.length} personas · {matrix.kpis.length} KPIs

@@ -3,27 +3,38 @@ import {
   getLatestAnalysis,
   getKpiMatrixByProject,
   getReportByProject,
+  listReportsByProject,
   listPersonas,
   listTestResults,
 } from "@/lib/db";
 import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { StepRow } from "@/components/layout/StepRow";
 import { ReportDashboard } from "@/components/report/ReportDashboard";
+import { ReportVersions } from "@/components/report/ReportVersions";
 import { GenerateReportButton } from "@/components/report/GenerateReportButton";
 
-export default async function ReportPage({ params }: { params: { id: string } }) {
+export default async function ReportPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { v?: string };
+}) {
   const userId = await getCurrentUserId();
   const project = await getOwnedProject(params.id, userId);
   if (!project) notFound();
 
-  const [matrix, analysis, report, allPersonas, testResults] = await Promise.all([
+  const requestedVersion = searchParams.v ? Number(searchParams.v) : undefined;
+  const [matrix, analysis, report, allReports, allPersonas, testResults] = await Promise.all([
     getKpiMatrixByProject(project.id),
     getLatestAnalysis(project.id),
-    getReportByProject(project.id),
+    getReportByProject(project.id, requestedVersion),
+    listReportsByProject(project.id),
     listPersonas(userId, project.id),
     listTestResults(project.id),
   ]);
   const personas = allPersonas.filter((p) => p.project_id === project.id);
+  const versions = allReports.map((r) => r.version ?? 1);
 
   return (
     <>
@@ -42,18 +53,23 @@ export default async function ReportPage({ params }: { params: { id: string } })
           <GenerateReportButton projectId={project.id} />
         </div>
       ) : (
-        <ReportDashboard
-          project={project}
-          analysis={analysis ?? null}
-          matrix={matrix}
-          personas={personas}
-          testResults={testResults}
-          generatedAt={report.created_at}
-          shareToken={report.share_token}
-          reportId={report.id}
-          annotations={report.annotations}
-          editable
-        />
+        <>
+          <ReportVersions projectId={project.id} versions={versions} current={report.version ?? 1} />
+
+          <ReportDashboard
+            project={project}
+            analysis={analysis ?? null}
+            matrix={matrix}
+            personas={personas}
+            testResults={testResults}
+            generatedAt={report.created_at}
+            shareToken={report.share_token}
+            reportId={report.id}
+            annotations={report.annotations}
+            version={report.version ?? 1}
+            editable
+          />
+        </>
       )}
     </>
   );

@@ -749,6 +749,9 @@ export function createReport(input: {
   kpi_matrix_id: string;
   annotations?: AnnotationMap;
 }): Report {
+  const versions = [...db.reports.values()]
+    .filter((x) => x.project_id === input.project_id)
+    .map((x) => x.version ?? 0);
   const r: Report = {
     id: uuid(),
     project_id: input.project_id,
@@ -756,16 +759,23 @@ export function createReport(input: {
     annotations: input.annotations ?? {},
     pdf_path: null,
     share_token: shareToken(),
+    version: (versions.length ? Math.max(...versions) : 0) + 1,
     created_at: now(),
   };
   db.reports.set(r.id, r);
   return r;
 }
 
-export function getReportByProject(projectId: string): Report | undefined {
+export function getReportByProject(projectId: string, version?: number): Report | undefined {
+  const rows = [...db.reports.values()].filter((r) => r.project_id === projectId);
+  if (version != null) return rows.find((r) => (r.version ?? 1) === version);
+  return rows.sort((a, b) => (b.version ?? 0) - (a.version ?? 0) || b.created_at.localeCompare(a.created_at))[0];
+}
+
+export function listReportsByProject(projectId: string): Report[] {
   return [...db.reports.values()]
     .filter((r) => r.project_id === projectId)
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+    .sort((a, b) => (b.version ?? 0) - (a.version ?? 0) || b.created_at.localeCompare(a.created_at));
 }
 
 export function getReportByShareToken(token: string): Report | undefined {
