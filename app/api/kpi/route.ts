@@ -57,11 +57,19 @@ export async function POST(req: Request) {
 
   const kpis: KPI[] = result.kpis.map((k) => ({ id: uuid(), ...k }));
 
+  // Composite UX score (0-100): use the model's scores when present, else average the KPI scores.
+  const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+  const uxBefore = Math.round(result.ux_score_before ?? avg(kpis.map((k) => k.before_score)));
+  const uxAfter = Math.round(result.ux_score_after ?? avg(kpis.map((k) => k.after_score)));
+
   const matrix = await createKpiMatrix({
     analysis_id: analysis.id,
     project_id: project.id,
     kpis,
     overall_confidence: result.overall_confidence,
+    ux_score_before: uxBefore,
+    ux_score_after: uxAfter,
+    ux_score_delta: uxAfter - uxBefore,
   });
   await logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/kpi", status: "success" });
 

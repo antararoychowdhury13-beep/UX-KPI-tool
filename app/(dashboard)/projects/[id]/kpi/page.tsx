@@ -4,6 +4,7 @@ import { getLatestAnalysis, getKpiMatrixByProject } from "@/lib/db";
 import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { StepRow } from "@/components/layout/StepRow";
 import { KPIMatrix } from "@/components/kpi/KPIMatrix";
+import { KPIHeader } from "@/components/kpi/KPIHeader";
 import { GenerateKpiButton } from "@/components/kpi/GenerateKpiButton";
 import { ExportCsvButton } from "@/components/kpi/ExportCsvButton";
 
@@ -55,7 +56,10 @@ export default async function KpiPage({ params }: { params: { id: string } }) {
           <GenerateKpiButton projectId={project.id} />
         </div>
       ) : (
-        <KPIMatrix kpis={matrix.kpis} />
+        <>
+          <KPIHeader matrix={matrix} />
+          <KPIMatrix kpis={matrix.kpis} />
+        </>
       )}
     </>
   );

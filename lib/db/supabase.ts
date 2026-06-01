@@ -330,19 +330,27 @@ export async function createKpiMatrix(input: {
   project_id: string;
   kpis: KPI[];
   overall_confidence: number;
+  ux_score_before?: number | null;
+  ux_score_after?: number | null;
+  ux_score_delta?: number | null;
 }): Promise<KPIMatrix> {
-  return must(
-    await sb()
-      .from("kpi_matrices")
-      .insert({
-        analysis_id: input.analysis_id,
-        project_id: input.project_id,
-        kpis: input.kpis,
-        overall_confidence: input.overall_confidence,
-      })
-      .select("*")
-      .single(),
-  ) as KPIMatrix;
+  const full = {
+    analysis_id: input.analysis_id,
+    project_id: input.project_id,
+    kpis: input.kpis,
+    overall_confidence: input.overall_confidence,
+    ux_score_before: input.ux_score_before ?? null,
+    ux_score_after: input.ux_score_after ?? null,
+    ux_score_delta: input.ux_score_delta ?? null,
+  };
+  const res = await sb().from("kpi_matrices").insert(full).select("*").single();
+  if (!res.error) return res.data as KPIMatrix;
+  // ux_score_* columns arrive with migration 0004 — retry without them on the base schema.
+  if (/ux_score_(before|after|delta)/.test(res.error.message)) {
+    const { ux_score_before: _b, ux_score_after: _a, ux_score_delta: _d, ...base } = full;
+    return must(await sb().from("kpi_matrices").insert(base).select("*").single()) as KPIMatrix;
+  }
+  throw new Error(`Supabase: ${res.error.message}`);
 }
 
 export async function getKpiMatrixByProject(projectId: string): Promise<KPIMatrix | undefined> {

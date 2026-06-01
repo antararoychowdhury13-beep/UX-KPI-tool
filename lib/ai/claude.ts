@@ -357,6 +357,8 @@ function mockKpis(personaNames: string[]): KPIGenerationResult {
 
   return {
     overall_confidence: 0.84,
+    ux_score_before: 58,
+    ux_score_after: 82,
     kpis: [
       k(
         "Task Completion Rate",

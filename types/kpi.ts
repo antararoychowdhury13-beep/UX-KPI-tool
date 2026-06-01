@@ -33,12 +33,18 @@ export interface KPIMatrix {
   project_id: string;
   kpis: KPI[];
   overall_confidence: number;
+  /** Composite UX score 0-100 (spec v2 §3). Optional — falls back to a KPI average if absent. */
+  ux_score_before?: number | null;
+  ux_score_after?: number | null;
+  ux_score_delta?: number | null;
   generated_at: string;
 }
 
 /** Full shape returned by the Claude KPI-generation prompt (spec §5, Prompt 4). */
 export interface KPIGenerationResult {
   overall_confidence: number;
+  ux_score_before?: number;
+  ux_score_after?: number;
   kpis: Omit<KPI, "id">[];
   top_3_improvements: string[];
   risks_and_regressions: string[];

@@ -616,6 +616,9 @@ export function createKpiMatrix(input: {
   project_id: string;
   kpis: KPI[];
   overall_confidence: number;
+  ux_score_before?: number | null;
+  ux_score_after?: number | null;
+  ux_score_delta?: number | null;
 }): KPIMatrix {
   const m: KPIMatrix = {
     id: uuid(),
@@ -623,6 +626,9 @@ export function createKpiMatrix(input: {
     project_id: input.project_id,
     kpis: input.kpis,
     overall_confidence: input.overall_confidence,
+    ux_score_before: input.ux_score_before ?? null,
+    ux_score_after: input.ux_score_after ?? null,
+    ux_score_delta: input.ux_score_delta ?? null,
     generated_at: now(),
   };
   db.kpiMatrices.set(m.id, m);

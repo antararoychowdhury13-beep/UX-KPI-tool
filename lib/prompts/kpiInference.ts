@@ -15,6 +15,8 @@ Industry context: ${params.industryContext}
 Return JSON only:
 {
   "overall_confidence": float,
+  "ux_score_before": number (0-100, composite UX score for the before flow),
+  "ux_score_after": number (0-100, composite UX score for the after flow),
   "kpis": [
     {
       "name": "...",

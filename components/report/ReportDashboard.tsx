@@ -31,8 +31,9 @@ export function ReportDashboard({
   annotations?: AnnotationMap;
   editable?: boolean;
 }) {
-  const avgBefore = Math.round(avg(matrix.kpis.map((k) => k.before_score)));
-  const avgAfter = Math.round(avg(matrix.kpis.map((k) => k.after_score)));
+  // Prefer the composite UX score; fall back to a KPI average (works pre-migration 0004).
+  const avgBefore = Math.round(matrix.ux_score_before ?? avg(matrix.kpis.map((k) => k.before_score)));
+  const avgAfter = Math.round(matrix.ux_score_after ?? avg(matrix.kpis.map((k) => k.after_score)));
 
   const top3 = [...matrix.kpis]
     .filter((k) => k.delta_direction === "improvement")
