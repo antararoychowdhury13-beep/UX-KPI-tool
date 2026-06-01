@@ -165,7 +165,12 @@ export function PersonaGenerator({
     });
     const data = await res.json();
     if (!res.ok) setError(data.error ?? "Generation failed");
-    else router.refresh();
+    else {
+      // The route analyses the project brief during generation; surface that
+      // insight if the user generated directly without running "Analyse flow".
+      if (data.flowContext) setFlow(data.flowContext as FlowContext);
+      router.refresh();
+    }
     setBusy(false);
   }
 

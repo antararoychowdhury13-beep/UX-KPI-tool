@@ -19,7 +19,7 @@ import type { Organisation } from "@/types/organisation";
 import type { AppNotification } from "@/types/notification";
 import type { AuditEntry } from "@/types/audit";
 import type { WebhookSubscription } from "@/types/webhook";
-import type { CustomTest } from "@/types/testing";
+import type { CustomTest, TestRun } from "@/types/testing";
 import type { ModelAssignments } from "@/types/models";
 import type { AnnotationMap, ApiCallStatus, ApiService, ApiUsageLog, Report } from "@/types/report";
 
@@ -203,6 +203,42 @@ export async function createCustomTest(input: {
 }
 export async function deleteCustomTest(id: string, userId: string): Promise<void> {
   await sb().from("custom_tests").delete().eq("id", id).eq("user_id", userId);
+}
+
+// ── test runs (v3 — persisted summary of a synthetic test run) ───────────────────
+export async function createTestRun(input: {
+  project_id: string;
+  flow_mode: TestRun["flow_mode"];
+  methods_selected: string[];
+  persona_ids?: string[] | null;
+  model_assignments?: unknown;
+  status?: string;
+  ux_score_before?: number | null;
+  ux_score_after?: number | null;
+  ux_delta?: number | null;
+  total_ai_calls?: number | null;
+}): Promise<TestRun> {
+  const full = {
+    project_id: input.project_id,
+    flow_mode: input.flow_mode,
+    methods_selected: input.methods_selected,
+    persona_ids: input.persona_ids ?? null,
+    model_assignments: input.model_assignments ?? null,
+    status: input.status ?? "completed",
+    ux_score_before: input.ux_score_before ?? null,
+    ux_score_after: input.ux_score_after ?? null,
+    ux_delta: input.ux_delta ?? null,
+    total_ai_calls: input.total_ai_calls ?? null,
+    completed_at: (input.status ?? "completed") === "completed" ? new Date().toISOString() : null,
+  };
+  const res = await sb().from("test_runs").insert(full).select("*").single();
+  if (!res.error) return res.data as TestRun;
+  // test_runs arrives with migration 0007 — degrade gracefully if it isn't applied yet.
+  throw new Error(`Supabase: ${res.error.message}`);
+}
+export async function listTestRuns(projectId: string): Promise<TestRun[]> {
+  const { data } = await sb().from("test_runs").select("*").eq("project_id", projectId).order("created_at", { ascending: false });
+  return (data ?? []) as TestRun[];
 }
 
 // ── webhook subscriptions (spec v2 §3) ──────────────────────────────────────────
@@ -511,6 +547,19 @@ export async function listPersonas(userId: string, projectId?: string): Promise<
 export async function saveToLibrary(id: string): Promise<Persona | undefined> {
   const { data } = await sb().from("personas").update({ project_id: null }).eq("id", id).select("*").maybeSingle();
   return (data as Persona) ?? undefined;
+}
+
+/** Delete a persona (owner-scoped). Removes dependent test results first to satisfy the FK. */
+export async function deletePersona(id: string, userId: string): Promise<boolean> {
+  const { data } = await sb().from("personas").select("id").eq("id", id).eq("user_id", userId).maybeSingle();
+  if (!data) return false;
+  try {
+    await sb().from("synthetic_test_results").delete().eq("persona_id", id);
+  } catch {
+    /* best-effort */
+  }
+  await sb().from("personas").delete().eq("id", id).eq("user_id", userId);
+  return true;
 }
 
 // ── synthetic test results ────────────────────────────────────────────────────

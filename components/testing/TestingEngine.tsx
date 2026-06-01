@@ -61,6 +61,7 @@ export function TestingEngine({
   const [runLabel, setRunLabel] = useState<string>("Ready — click Start to begin");
   const [runStep, setRunStep] = useState(0); // 0..4 chip index
   const [error, setError] = useState<string | null>(null);
+  const [completed, setCompleted] = useState(false);
   const runRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
 
@@ -126,7 +127,9 @@ export function TestingEngine({
     setBusy(true);
     setError(null);
     setProgress(0);
+    setCompleted(false);
     const methods = selected.length ? selected : ["heuristic"];
+    const flowModeKey = flowMode === "compare" ? "before_after" : flowMode === "multi" ? "multi_variant" : "single";
     try {
       for (let i = 0; i < methods.length; i++) {
         const mId = methods[i];
@@ -167,9 +170,27 @@ export function TestingEngine({
           }
         }
       }
+      // Persist a run-level summary so the KPI matrix and report have a durable record to build
+      // from (per-persona results were already saved by /api/test/stream).
+      try {
+        await fetch("/api/test/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId,
+            methods,
+            flowMode: flowModeKey,
+            modelAssignments: assign,
+            totalAiCalls: aiCalls,
+          }),
+        });
+      } catch {
+        /* non-fatal: results are saved regardless */
+      }
       setProgress(100);
       setRunStep(4);
-      setRunLabel("All tests complete — results updated");
+      setRunLabel("All tests complete — results saved");
+      setCompleted(true);
       router.refresh();
     } catch {
       setError("Test run failed");
@@ -341,11 +362,23 @@ export function TestingEngine({
           </div>
           <div className="prog-track" style={{ marginTop: 8 }}><div className="prog-fill cyan" style={{ width: `${progress}%` }} /></div>
           {error && <div style={{ fontSize: 11, color: "var(--red-text)", marginTop: 8 }}>{error}</div>}
+          {completed && (
+            <div className="run-done">
+              <i className="ti ti-circle-check" />
+              <span>Results saved. Generate the KPI matrix and report from this run.</span>
+            </div>
+          )}
           <div className="ia">
-            <button className="tb-btn" onClick={() => setShowRun(false)} disabled={busy}>Cancel</button>
-            <button className="tb-btn primary" onClick={startRun} disabled={busy}>
-              <i className={`ti ${busy ? "ti-loader-2" : "ti-player-play"}`} /> {busy ? "Running…" : "Start Test Run"}
-            </button>
+            <button className="tb-btn" onClick={() => setShowRun(false)} disabled={busy}>Close</button>
+            {completed ? (
+              <button className="tb-btn primary" onClick={() => router.push(`/projects/${projectId}/kpi`)}>
+                <i className="ti ti-arrow-right" /> Continue to KPI matrix
+              </button>
+            ) : (
+              <button className="tb-btn primary" onClick={startRun} disabled={busy}>
+                <i className={`ti ${busy ? "ti-loader-2" : "ti-player-play"}`} /> {busy ? "Running…" : "Start Test Run"}
+              </button>
+            )}
           </div>
         </div>
       )}

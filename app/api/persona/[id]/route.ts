@@ -2,7 +2,7 @@
 // PATCH /api/persona/[id] — { action: "saveToLibrary" } copies the persona into the user's library
 //   (project_id = null) while leaving the project's copy intact.
 import { NextResponse } from "next/server";
-import { getPersona, addPersonas } from "@/lib/db";
+import { getPersona, addPersonas, deletePersona, recordAudit } from "@/lib/db";
 import { getCurrentUserIdOrNull } from "@/lib/auth";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
 
@@ -42,4 +42,16 @@ export async function PATCH(
     return NextResponse.json({ persona: copy }, { status: 201 });
   }
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+}
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { id: string } },
+) {
+  const userId = await getCurrentUserIdOrNull();
+  if (!userId) return unauthorized();
+  const ok = await deletePersona(params.id, userId);
+  if (!ok) return NextResponse.json({ error: "Unknown persona" }, { status: 404 });
+  try { await recordAudit({ user_id: userId, action: "persona.deleted", entity_type: "persona", entity_id: params.id }); } catch {}
+  return NextResponse.json({ ok: true });
 }

@@ -332,6 +332,7 @@ body {
   .pc-act { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; padding: 5px 9px; border-radius: var(--r); border: 1px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; font-family: inherit; transition: all .12s; }
   .pc-act:hover { border-color: var(--blue); color: var(--blue-text); background: var(--blue-light); }
   .pc-act:disabled { opacity: .6; cursor: not-allowed; }
+  .pc-act.danger:hover { border-color: var(--red); color: var(--red-text); background: var(--red-light); }
   .pc-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; padding: 5px 9px; border-radius: var(--r); background: var(--surface2); color: var(--text3); }
   .pc-chip.done { background: var(--green-light); color: var(--green-text); }
   /* persona detail modal */
@@ -694,6 +695,8 @@ body {
   /* run panel */
   .run-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 14px; margin-top: 16px; }
   .rp-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .run-done { display: flex; align-items: center; gap: 7px; margin-top: 10px; padding: 9px 11px; border-radius: var(--r); background: var(--green-light); color: var(--green-text); font-size: 12px; font-weight: 600; }
+  .run-done i { font-size: 15px; }
   .rp-t { font-size: 13px; font-weight: 700; color: var(--text); }
   .rp-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 12px; }
   .rps { background: var(--surface2); border-radius: var(--r); padding: 9px 11px; text-align: center; border: 1px solid var(--border); }

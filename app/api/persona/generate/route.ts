@@ -1,7 +1,7 @@
 // POST /api/persona/generate — generate synthetic personas via Claude and attach them to a project.
 import { NextResponse } from "next/server";
 import { addPersonas, logApiUsage, recordAudit } from "@/lib/db";
-import { generatePersonas } from "@/lib/ai/claude";
+import { generatePersonas, analyzeFlowContext } from "@/lib/ai/claude";
 import { resolveTextProvider } from "@/lib/ai/providers";
 import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
@@ -40,17 +40,38 @@ export async function POST(req: Request) {
 
   const count = Math.max(1, Math.min(body.count ?? 3, 10));
   const industry = body.industry ?? body.productType ?? "Enterprise Software";
+  const brief = project.description ?? "";
+
+  // Step 1 — analyse the project brief so personas are grounded in the actual flow,
+  // its users, and its tensions rather than generic defaults.
+  const flow = brief.trim()
+    ? await analyzeFlowContext({
+        flowDescription: brief,
+        flowType: String(project.flow_type ?? ""),
+        industry,
+      })
+    : null;
+
+  // Use the analysis to fill any config the caller left blank, so an empty
+  // builder form still yields a brief-tuned cohort.
+  const join = (xs?: string[]) => (xs && xs.length ? xs.join(", ") : "");
+  const roleLevels = body.roleLevels?.trim() || join(flow?.recommended_role_levels);
+  const traits = body.traits?.trim() || join(flow?.recommended_behavioral_traits);
+  const demographics = body.demographics?.trim() || join(flow?.recommended_age_ranges);
+  const techComfort = body.techComfort?.trim() || join(flow?.recommended_tech_comfort) || "low to high";
+
   const generated = await generatePersonas({
     count,
-    flowDescription: project.description ?? "",
+    flowDescription: brief,
     productType: body.productType ?? "Enterprise Software",
     industry,
-    ageRanges: body.demographics ?? "",
+    flowContext: flow ? JSON.stringify(flow) : undefined,
+    ageRanges: demographics,
     genders: body.genders,
-    roleLevels: body.roleLevels,
+    roleLevels,
     accessibility: body.accessibility,
-    traits: body.traits ?? "",
-    techComfort: body.techComfort ?? "low to high",
+    traits,
+    techComfort,
   });
 
   const normTech = (g: GeneratedPersona): TechComfort => {
@@ -86,6 +107,6 @@ export async function POST(req: Request) {
 
   const personas = await addPersonas(rows);
   await logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/persona/generate", status: "success" });
-  await recordAudit({ user_id: userId, action: "persona.generated", entity_type: "project", entity_id: project.id, metadata: { count: personas.length } });
-  return NextResponse.json({ personas }, { status: 201 });
+  await recordAudit({ user_id: userId, action: "persona.generated", entity_type: "project", entity_id: project.id, metadata: { count: personas.length, briefAnalysed: !!flow } });
+  return NextResponse.json({ personas, flowContext: flow }, { status: 201 });
 }

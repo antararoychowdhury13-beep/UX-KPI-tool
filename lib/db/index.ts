@@ -57,6 +57,8 @@ export const saveModelAssignments = pick(sb.saveModelAssignments, mem.saveModelA
 export const listCustomTests = pick(sb.listCustomTests, mem.listCustomTests);
 export const createCustomTest = pick(sb.createCustomTest, mem.createCustomTest);
 export const deleteCustomTest = pick(sb.deleteCustomTest, mem.deleteCustomTest);
+export const createTestRun = pick(sb.createTestRun, mem.createTestRun);
+export const listTestRuns = pick(sb.listTestRuns, mem.listTestRuns);
 export const adminStats = pick(sb.adminStats, mem.adminStats);
 export const hasQuota = pick(sb.hasQuota, mem.hasQuota);
 export const incrementQuotaUsed = pick(sb.incrementQuotaUsed, mem.incrementQuotaUsed);
@@ -82,6 +84,7 @@ export const addPersonas = pick(sb.addPersonas, mem.addPersonas);
 export const getPersona = pick(sb.getPersona, mem.getPersona);
 export const listPersonas = pick(sb.listPersonas, mem.listPersonas);
 export const saveToLibrary = pick(sb.saveToLibrary, mem.saveToLibrary);
+export const deletePersona = pick(sb.deletePersona, mem.deletePersona);
 
 export const addTestResult = pick(sb.addTestResult, mem.addTestResult);
 export const listTestResults = pick(sb.listTestResults, mem.listTestResults);

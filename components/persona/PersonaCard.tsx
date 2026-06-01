@@ -30,6 +30,8 @@ export function PersonaCard({ persona, index = 0 }: { persona: Persona; index?: 
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [removed, setRemoved] = useState(false);
   const inLibrary = persona.project_id === null;
 
   const tech = techDisplay(persona);
@@ -56,6 +58,21 @@ export function PersonaCard({ persona, index = 0 }: { persona: Persona; index?: 
     }
     setSaving(false);
   }
+
+  async function del(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!window.confirm(`Delete persona "${persona.name}"? This also removes its test results and cannot be undone.`)) return;
+    setDeleting(true);
+    const res = await fetch(`/api/persona/${persona.id}`, { method: "DELETE" });
+    if (res.ok) {
+      setRemoved(true);
+      router.refresh();
+    } else {
+      setDeleting(false);
+    }
+  }
+
+  if (removed) return null;
 
   return (
     <>
@@ -108,6 +125,9 @@ export function PersonaCard({ persona, index = 0 }: { persona: Persona; index?: 
             </button>
           )}
           <button className="pc-act" onClick={() => setOpen(true)}><i className="ti ti-eye" /> View detail</button>
+          <button className="pc-act danger" onClick={del} disabled={deleting} title="Delete persona" aria-label="Delete persona">
+            <i className={`ti ${deleting ? "ti-loader-2" : "ti-trash"}`} /> {deleting ? "Deleting…" : "Delete"}
+          </button>
         </div>
       </div>
 

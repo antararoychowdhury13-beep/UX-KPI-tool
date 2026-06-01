@@ -23,7 +23,7 @@ import type { Organisation } from "@/types/organisation";
 import type { AppNotification } from "@/types/notification";
 import type { AuditEntry } from "@/types/audit";
 import type { WebhookSubscription } from "@/types/webhook";
-import type { CustomTest } from "@/types/testing";
+import type { CustomTest, TestRun } from "@/types/testing";
 import type { ModelAssignments } from "@/types/models";
 import type { AnnotationMap, Report, ApiUsageLog, ApiService, ApiCallStatus, AIService } from "@/types/report";
 
@@ -54,6 +54,7 @@ interface Store {
   webhooks: WebhookSubscription[];
   modelAssignments: Map<string, ModelAssignments>;
   customTests: CustomTest[];
+  testRuns: TestRun[];
 }
 
 const MOCK_USER_ID = "00000000-0000-0000-0000-000000000001";
@@ -77,6 +78,7 @@ function seed(): Store {
     webhooks: [],
     modelAssignments: new Map(),
     customTests: [],
+    testRuns: [],
   };
 
   const builtinServices: Array<Omit<AIService, "id" | "created_at">> = [
@@ -452,6 +454,40 @@ export function deleteCustomTest(id: string, userId: string): void {
   db.customTests = db.customTests.filter((c) => !(c.id === id && c.user_id === userId));
 }
 
+// ── test runs (v3 — persisted summary of a synthetic test run) ───────────────────
+export function createTestRun(input: {
+  project_id: string;
+  flow_mode: TestRun["flow_mode"];
+  methods_selected: string[];
+  persona_ids?: string[] | null;
+  model_assignments?: unknown;
+  status?: string;
+  ux_score_before?: number | null;
+  ux_score_after?: number | null;
+  ux_delta?: number | null;
+  total_ai_calls?: number | null;
+}): TestRun {
+  const r: TestRun = {
+    id: uuid(),
+    created_at: now(),
+    status: input.status ?? "completed",
+    persona_ids: input.persona_ids ?? null,
+    model_assignments: input.model_assignments ?? null,
+    ux_score_before: input.ux_score_before ?? null,
+    ux_score_after: input.ux_score_after ?? null,
+    ux_delta: input.ux_delta ?? null,
+    total_ai_calls: input.total_ai_calls ?? null,
+    project_id: input.project_id,
+    flow_mode: input.flow_mode,
+    methods_selected: input.methods_selected,
+  };
+  db.testRuns.unshift(r);
+  return r;
+}
+export function listTestRuns(projectId: string): TestRun[] {
+  return db.testRuns.filter((r) => r.project_id === projectId);
+}
+
 /** Aggregate counts for the admin overview. */
 export function adminStats() {
   return {
@@ -768,6 +804,14 @@ export function saveToLibrary(id: string): Persona | undefined {
   const p = db.personas.get(id);
   if (p) p.project_id = null;
   return p;
+}
+
+export function deletePersona(id: string, userId: string): boolean {
+  const p = db.personas.get(id);
+  if (!p || p.user_id !== userId) return false;
+  db.personas.delete(id);
+  for (const [k, r] of db.testResults) if (r.persona_id === id) db.testResults.delete(k);
+  return true;
 }
 
 // ── synthetic test results ────────────────────────────────────────────────────────
