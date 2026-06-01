@@ -6,11 +6,12 @@ import { getReportByShareToken } from "@/lib/db";
 import { appUrl } from "@/lib/config";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(req: Request) {
   const token = new URL(req.url).searchParams.get("token");
-  if (!token || !getReportByShareToken(token)) {
+  if (!token || !(await getReportByShareToken(token))) {
     return NextResponse.json({ error: "Unknown report" }, { status: 404 });
   }
 

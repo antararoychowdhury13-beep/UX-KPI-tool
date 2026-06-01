@@ -6,12 +6,14 @@ import { KPIMatrix } from "@/components/kpi/KPIMatrix";
 import { GenerateKpiButton } from "@/components/kpi/GenerateKpiButton";
 import { ExportCsvButton } from "@/components/kpi/ExportCsvButton";
 
-export default function KpiPage({ params }: { params: { id: string } }) {
-  const project = getProject(params.id);
+export default async function KpiPage({ params }: { params: { id: string } }) {
+  const project = await getProject(params.id);
   if (!project) notFound();
 
-  const analysis = getLatestAnalysis(project.id);
-  const matrix = getKpiMatrixByProject(project.id);
+  const [analysis, matrix] = await Promise.all([
+    getLatestAnalysis(project.id),
+    getKpiMatrixByProject(project.id),
+  ]);
 
   return (
     <>

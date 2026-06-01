@@ -12,16 +12,19 @@ import { StepRow } from "@/components/layout/StepRow";
 import { ReportDashboard } from "@/components/report/ReportDashboard";
 import { GenerateReportButton } from "@/components/report/GenerateReportButton";
 
-export default function ReportPage({ params }: { params: { id: string } }) {
-  const project = getProject(params.id);
+export default async function ReportPage({ params }: { params: { id: string } }) {
+  const project = await getProject(params.id);
   if (!project) notFound();
 
   const userId = getCurrentUserId();
-  const matrix = getKpiMatrixByProject(project.id);
-  const analysis = getLatestAnalysis(project.id);
-  const report = getReportByProject(project.id);
-  const personas = listPersonas(userId, project.id).filter((p) => p.project_id === project.id);
-  const testResults = listTestResults(project.id);
+  const [matrix, analysis, report, allPersonas, testResults] = await Promise.all([
+    getKpiMatrixByProject(project.id),
+    getLatestAnalysis(project.id),
+    getReportByProject(project.id),
+    listPersonas(userId, project.id),
+    listTestResults(project.id),
+  ]);
+  const personas = allPersonas.filter((p) => p.project_id === project.id);
 
   return (
     <>

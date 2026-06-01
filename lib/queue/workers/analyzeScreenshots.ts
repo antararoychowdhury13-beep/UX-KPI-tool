@@ -15,17 +15,17 @@ export async function processAnalysis(
   jobId: string,
 ): Promise<void> {
   const startedAt = Date.now();
-  const project = getProject(projectId);
+  const project = await getProject(projectId);
   if (!project) {
     updateJob(jobId, { status: "failed", error: "Project not found" });
     return;
   }
 
   updateJob(jobId, { status: "processing" });
-  updateProjectStatus(projectId, "processing");
+  await updateProjectStatus(projectId, "processing");
 
   try {
-    const screenshots = listScreenshots(projectId);
+    const screenshots = await listScreenshots(projectId);
     const before = screenshots.filter((s) => s.type === "before");
     const after = screenshots.filter((s) => s.type === "after");
 
@@ -49,7 +49,7 @@ export async function processAnalysis(
       new_capabilities_added: raw.new_capabilities_added,
     };
 
-    const analysis = createAnalysis({
+    const analysis = await createAnalysis({
       project_id: projectId,
       status: "completed",
       before_summary: raw.before_flow_summary,
@@ -60,13 +60,13 @@ export async function processAnalysis(
     });
 
     updateJob(jobId, { status: "completed", analysis_id: analysis.id });
-    updateProjectStatus(projectId, "completed");
+    await updateProjectStatus(projectId, "completed");
   } catch (err) {
     updateJob(jobId, {
       status: "failed",
       error: err instanceof Error ? err.message : "Analysis failed",
     });
-    updateProjectStatus(projectId, "failed");
+    await updateProjectStatus(projectId, "failed");
   }
 }
 

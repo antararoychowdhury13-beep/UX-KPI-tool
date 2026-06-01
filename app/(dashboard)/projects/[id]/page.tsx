@@ -11,16 +11,19 @@ import {
 import { getCurrentUserId } from "@/lib/auth";
 import { Badge, statusTone } from "@/components/ui/Badge";
 
-export default function ProjectDetailPage({ params }: { params: { id: string } }) {
-  const project = getProject(params.id);
+export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
+  const project = await getProject(params.id);
   if (!project) notFound();
 
   const userId = getCurrentUserId();
-  const screenshots = listScreenshots(project.id);
-  const analysis = getLatestAnalysis(project.id);
-  const personas = listPersonas(userId, project.id).filter((p) => p.project_id === project.id);
-  const kpi = getKpiMatrixByProject(project.id);
-  const report = getReportByProject(project.id);
+  const [screenshots, analysis, allPersonas, kpi, report] = await Promise.all([
+    listScreenshots(project.id),
+    getLatestAnalysis(project.id),
+    listPersonas(userId, project.id),
+    getKpiMatrixByProject(project.id),
+    getReportByProject(project.id),
+  ]);
+  const personas = allPersonas.filter((p) => p.project_id === project.id);
 
   const steps = [
     { href: "upload", icon: "ti-upload", title: "Upload screens", detail: `${screenshots.length} uploaded`, done: screenshots.length > 0 },

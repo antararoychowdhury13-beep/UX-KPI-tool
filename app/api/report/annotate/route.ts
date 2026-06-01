@@ -9,9 +9,9 @@ export const runtime = "nodejs";
 export async function PATCH(req: Request) {
   const body = await readJson<{ reportId?: string; annotations?: AnnotationMap }>(req);
   if (!body) return badRequest("Invalid JSON body");
-  if (!body.reportId || !getReport(body.reportId)) {
+  if (!body.reportId || !(await getReport(body.reportId))) {
     return NextResponse.json({ error: "Unknown report" }, { status: 404 });
   }
-  const report = updateReportAnnotations(body.reportId, body.annotations ?? {});
+  const report = await updateReportAnnotations(body.reportId, body.annotations ?? {});
   return NextResponse.json({ report });
 }

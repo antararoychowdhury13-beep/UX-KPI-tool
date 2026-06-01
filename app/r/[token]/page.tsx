@@ -10,18 +10,20 @@ import {
 import { ReportDashboard } from "@/components/report/ReportDashboard";
 
 // Public, no-login report view (acceptance: share link works without login).
-export default function PublicReportPage({ params }: { params: { token: string } }) {
-  const report = getReportByShareToken(params.token);
+export default async function PublicReportPage({ params }: { params: { token: string } }) {
+  const report = await getReportByShareToken(params.token);
   if (!report) notFound();
 
-  const project = getProject(report.project_id);
-  const matrix = getKpiMatrixByProject(report.project_id);
+  const [project, matrix, analysis] = await Promise.all([
+    getProject(report.project_id),
+    getKpiMatrixByProject(report.project_id),
+    getLatestAnalysis(report.project_id),
+  ]);
   if (!project || !matrix) notFound();
-  const analysis = getLatestAnalysis(report.project_id);
-  const personas = listPersonas(project.user_id, report.project_id).filter(
+  const personas = (await listPersonas(project.user_id, report.project_id)).filter(
     (p) => p.project_id === report.project_id,
   );
-  const testResults = listTestResults(report.project_id);
+  const testResults = await listTestResults(report.project_id);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>

@@ -15,14 +15,17 @@ function frictionCounts(points: FrictionPoint[]) {
   };
 }
 
-export default function TestingPage({ params }: { params: { id: string } }) {
-  const project = getProject(params.id);
+export default async function TestingPage({ params }: { params: { id: string } }) {
+  const project = await getProject(params.id);
   if (!project) notFound();
 
   const userId = getCurrentUserId();
-  const analysis = getLatestAnalysis(project.id);
-  const personas = listPersonas(userId, project.id).filter((p) => p.project_id === project.id);
-  const results = listTestResults(project.id);
+  const [analysis, allPersonas, results] = await Promise.all([
+    getLatestAnalysis(project.id),
+    listPersonas(userId, project.id),
+    listTestResults(project.id),
+  ]);
+  const personas = allPersonas.filter((p) => p.project_id === project.id);
 
   const rows = personas.map((p, i) => ({
     persona: p,

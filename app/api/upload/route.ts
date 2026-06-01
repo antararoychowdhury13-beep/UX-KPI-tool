@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   const projectId = String(form.get("projectId") ?? "");
   const type = String(form.get("type") ?? "") as ScreenshotType;
 
-  if (!projectId || !getProject(projectId)) {
+  if (!projectId || !(await getProject(projectId))) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
   if (type !== "before" && type !== "after") {
@@ -46,6 +46,6 @@ export async function POST(req: Request) {
     };
   });
 
-  const screenshots = addScreenshots(rows);
+  const screenshots = await addScreenshots(rows);
   return NextResponse.json({ screenshots }, { status: 201 });
 }

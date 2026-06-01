@@ -2,8 +2,8 @@ import { listPersonas } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 import { PersonaCard } from "@/components/persona/PersonaCard";
 
-export default function PersonaLibraryPage() {
-  const personas = listPersonas(getCurrentUserId()).filter((p) => p.project_id === null);
+export default async function PersonaLibraryPage() {
+  const personas = (await listPersonas(getCurrentUserId())).filter((p) => p.project_id === null);
 
   return (
     <>

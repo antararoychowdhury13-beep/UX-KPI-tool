@@ -25,13 +25,22 @@ function badgeLabel(status: string) {
   return "Draft";
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
   const userId = getCurrentUserId();
-  const user = getCurrentUser();
-  const projects = listProjects(userId);
+  const user = await getCurrentUser();
+  const projects = await listProjects(userId);
   const analysesRun = projects.filter((p) => p.status === "completed").length;
-  const personaCount = listPersonas(userId).filter((p) => !p.is_template).length;
+  const personaCount = (await listPersonas(userId)).filter((p) => !p.is_template).length;
   const quotaRemaining = user.quota_analyses - user.quota_used;
+
+  // Per-project counts (resolved up front so the JSX stays synchronous).
+  const cards = await Promise.all(
+    projects.map(async (p) => ({
+      project: p,
+      screens: (await listScreenshots(p.id)).length,
+      personas: (await listPersonas(userId, p.id)).filter((x) => x.project_id === p.id).length,
+    })),
+  );
 
   return (
     <>
@@ -58,10 +67,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="proj-grid">
-        {projects.map((p) => {
+        {cards.map(({ project: p, screens, personas }) => {
           const meta = FLOW_ICON[String(p.flow_type)] ?? FLOW_ICON.custom;
-          const screens = listScreenshots(p.id).length;
-          const personas = listPersonas(userId, p.id).filter((x) => x.project_id === p.id).length;
           return (
             <Link key={p.id} href={`/projects/${p.id}`} className="proj-card">
               <div className="proj-card-top">

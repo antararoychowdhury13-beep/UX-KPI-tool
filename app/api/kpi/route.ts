@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const body = await readJson<{ projectId?: string; industryContext?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
   const { projectId, industryContext } = body;
-  if (!projectId || !getProject(projectId)) {
+  if (!projectId || !(await getProject(projectId))) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
 
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }
 
-  const analysis = getLatestAnalysis(projectId);
+  const analysis = await getLatestAnalysis(projectId);
   if (!analysis) {
     return NextResponse.json(
       { error: "Run analysis before generating KPIs" },
@@ -39,10 +39,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const personas = listPersonas(userId, projectId).filter(
+  const personas = (await listPersonas(userId, projectId)).filter(
     (p) => p.project_id === projectId,
   );
-  const testResults = listTestResults(projectId);
+  const testResults = await listTestResults(projectId);
 
   const result = await generateKpiMatrix({
     analysisJson: JSON.stringify(analysis.flow_diff ?? {}),
@@ -54,13 +54,13 @@ export async function POST(req: Request) {
 
   const kpis: KPI[] = result.kpis.map((k) => ({ id: uuid(), ...k }));
 
-  const matrix = createKpiMatrix({
+  const matrix = await createKpiMatrix({
     analysis_id: analysis.id,
     project_id: projectId,
     kpis,
     overall_confidence: result.overall_confidence,
   });
-  logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/kpi", status: "success" });
+  await logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/kpi", status: "success" });
 
   return NextResponse.json(
     {

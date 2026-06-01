@@ -10,7 +10,7 @@ export async function GET(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
-  const persona = getPersona(params.id);
+  const persona = await getPersona(params.id);
   if (!persona) {
     return NextResponse.json({ error: "Unknown persona" }, { status: 404 });
   }
@@ -25,7 +25,7 @@ export async function PATCH(
   if (!body) return badRequest("Invalid JSON body");
   const { action } = body;
   if (action === "saveToLibrary") {
-    const persona = saveToLibrary(params.id);
+    const persona = await saveToLibrary(params.id);
     if (!persona) {
       return NextResponse.json({ error: "Unknown persona" }, { status: 404 });
     }

@@ -9,11 +9,11 @@ export async function POST(req: Request) {
   const body = await readJson<{ projectId?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
   const { projectId } = body;
-  if (!projectId || !getProject(projectId)) {
+  if (!projectId || !(await getProject(projectId))) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
 
-  const matrix = getKpiMatrixByProject(projectId);
+  const matrix = await getKpiMatrixByProject(projectId);
   if (!matrix) {
     return NextResponse.json(
       { error: "Generate a KPI matrix before creating a report" },
@@ -21,6 +21,6 @@ export async function POST(req: Request) {
     );
   }
 
-  const report = createReport({ project_id: projectId, kpi_matrix_id: matrix.id });
+  const report = await createReport({ project_id: projectId, kpi_matrix_id: matrix.id });
   return NextResponse.json({ report }, { status: 201 });
 }

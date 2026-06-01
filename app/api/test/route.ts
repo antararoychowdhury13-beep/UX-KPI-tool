@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   const body = await readJson<{ projectId?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
   const { projectId } = body;
-  if (!projectId || !getProject(projectId)) {
+  if (!projectId || !(await getProject(projectId))) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
 
@@ -29,10 +29,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }
 
-  const project = getProject(projectId)!;
-  const analysis = getLatestAnalysis(projectId);
+  const project = (await getProject(projectId))!;
+  const analysis = await getLatestAnalysis(projectId);
   const keyChanges = JSON.stringify(analysis?.flow_diff?.key_changes ?? []);
-  const personas = listPersonas(userId, projectId).filter(
+  const personas = (await listPersonas(userId, projectId)).filter(
     (p) => p.project_id === projectId,
   );
 
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
         keyChanges,
       });
       results.push(
-        addTestResult({
+        await addTestResult({
           project_id: projectId,
           persona_id: persona.id,
           flow_type: flowType,
@@ -69,6 +69,6 @@ export async function POST(req: Request) {
     }
   }
 
-  logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/test", status: "success" });
+  await logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/test", status: "success" });
   return NextResponse.json({ results }, { status: 201 });
 }

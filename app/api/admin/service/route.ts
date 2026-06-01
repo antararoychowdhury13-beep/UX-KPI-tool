@@ -8,18 +8,19 @@ import { getCurrentUser } from "@/lib/auth";
 import { readJson, badRequest } from "@/lib/http";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function forbidden() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 
 export async function GET() {
-  if (getCurrentUser().role !== "admin") return forbidden();
+  if ((await getCurrentUser()).role !== "admin") return forbidden();
   return NextResponse.json({ services: listAIServices() });
 }
 
 export async function POST(req: Request) {
-  if (getCurrentUser().role !== "admin") return forbidden();
+  if ((await getCurrentUser()).role !== "admin") return forbidden();
   const body = await readJson<{
     name?: string;
     slug?: string;
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  if (getCurrentUser().role !== "admin") return forbidden();
+  if ((await getCurrentUser()).role !== "admin") return forbidden();
   const body = await readJson<{
     id?: string;
     name?: string;
@@ -53,7 +54,7 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  if (getCurrentUser().role !== "admin") return forbidden();
+  if ((await getCurrentUser()).role !== "admin") return forbidden();
   const body = await readJson<{ id?: string }>(req);
   if (!body?.id) return badRequest("id is required");
   const ok = deleteAIService(body.id);

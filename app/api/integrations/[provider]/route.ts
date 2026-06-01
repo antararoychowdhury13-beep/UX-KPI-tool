@@ -23,7 +23,7 @@ export async function POST(req: Request, { params }: { params: { provider: strin
   if (!cfg) return NextResponse.json({ error: "Unknown integration" }, { status: 404 });
 
   const body = await readJson<{ projectId?: string }>(req);
-  if (!body?.projectId || !getProject(body.projectId)) return badRequest("Unknown project");
+  if (!body?.projectId || !(await getProject(body.projectId))) return badRequest("Unknown project");
 
   if (!cfg.configured()) {
     return NextResponse.json({

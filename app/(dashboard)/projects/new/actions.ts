@@ -8,7 +8,7 @@ export async function createProjectAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) redirect("/projects/new?error=name");
 
-  const project = createProject({
+  const project = await createProject({
     user_id: getCurrentUserId(),
     name,
     description: String(formData.get("description") ?? ""),

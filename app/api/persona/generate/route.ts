@@ -21,7 +21,8 @@ export async function POST(req: Request) {
   }>(req);
   if (!body) return badRequest("Invalid JSON body");
 
-  if (!body.projectId || !getProject(body.projectId)) {
+  const project = body.projectId ? await getProject(body.projectId) : undefined;
+  if (!project) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
 
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
   const count = Math.max(1, Math.min(body.count ?? 3, 10));
   const generated = await generatePersonas({
     count,
-    flowDescription: getProject(body.projectId)!.description ?? "",
+    flowDescription: project.description ?? "",
     productType: body.productType ?? "Enterprise Software",
     demographics: body.demographics ?? "",
     traits: body.traits ?? "",
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
     generated_by_ai: true,
   }));
 
-  const personas = addPersonas(rows);
-  logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/persona/generate", status: "success" });
+  const personas = await addPersonas(rows);
+  await logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/persona/generate", status: "success" });
   return NextResponse.json({ personas }, { status: 201 });
 }

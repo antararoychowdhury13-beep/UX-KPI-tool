@@ -1,9 +1,9 @@
 import { adminStats, listApiUsage, listAIServices } from "@/lib/db";
 import { hasSupabase } from "@/lib/config";
 
-export default function AdminOverviewPage() {
-  const stats = adminStats();
-  const usage = listApiUsage(8);
+export default async function AdminOverviewPage() {
+  const stats = await adminStats();
+  const usage = await listApiUsage(8);
   const services = listAIServices();
 
   return (

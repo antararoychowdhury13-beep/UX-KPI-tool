@@ -1,0 +1,357 @@
+// Supabase-backed data layer (used when NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set).
+// Uses a service-role client for server-side data ops; user scoping is done in queries (RLS lands
+// in Stage 2). AI-service config and ephemeral analysis jobs have no tables — those stay in-memory
+// (delegated from the facade in index.ts).
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type {
+  Analysis,
+  AnalysisStatus,
+  FlowDiff,
+  Project,
+  ProjectStatus,
+  Screenshot,
+  ScreenshotType,
+  User,
+} from "@/types/project";
+import type { Persona, SyntheticTestResult } from "@/types/persona";
+import type { KPI, KPIMatrix } from "@/types/kpi";
+import type { AnnotationMap, ApiCallStatus, ApiService, ApiUsageLog, Report } from "@/types/report";
+
+let client: SupabaseClient | null = null;
+function sb(): SupabaseClient {
+  if (!client) {
+    client = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+        // Next.js patches global fetch and caches GET responses — that would serve stale/empty
+        // query results. Force no-store so every query hits the database.
+        global: {
+          fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+            fetch(input, { ...init, cache: "no-store" }),
+        },
+      },
+    );
+  }
+  return client;
+}
+
+function must<T>(res: { data: T | null; error: { message: string } | null }): T {
+  if (res.error) throw new Error(`Supabase: ${res.error.message}`);
+  return res.data as T;
+}
+
+// ── users ────────────────────────────────────────────────────────────────────
+export async function getUser(id: string): Promise<User | undefined> {
+  const { data, error } = await sb().from("users").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`getUser failed: ${error.message}`);
+  return (data as User) ?? undefined;
+}
+
+export async function listUsers(): Promise<User[]> {
+  return must(await sb().from("users").select("*").order("created_at")) as User[];
+}
+
+export async function adminStats() {
+  const count = async (table: string) => {
+    const { count } = await sb().from(table).select("*", { count: "exact", head: true });
+    return count ?? 0;
+  };
+  const [users, projects, analyses, reports, apiCalls] = await Promise.all([
+    count("users"), count("projects"), count("analyses"), count("reports"), count("api_usage_log"),
+  ]);
+  return { users, projects, analyses, reports, apiCalls };
+}
+
+export async function hasQuota(userId: string): Promise<boolean> {
+  const u = await getUser(userId);
+  return !!u && u.quota_used < u.quota_analyses;
+}
+
+export async function incrementQuotaUsed(userId: string): Promise<void> {
+  const u = await getUser(userId);
+  if (u) await sb().from("users").update({ quota_used: u.quota_used + 1 }).eq("id", userId);
+}
+
+export async function setQuota(userId: string, quotaAnalyses: number): Promise<User | undefined> {
+  const { data } = await sb()
+    .from("users")
+    .update({ quota_analyses: Math.max(0, quotaAnalyses) })
+    .eq("id", userId)
+    .select("*")
+    .maybeSingle();
+  return (data as User) ?? undefined;
+}
+
+// ── api usage log ──────────────────────────────────────────────────────────────
+export async function logApiUsage(input: {
+  user_id: string;
+  service: ApiService;
+  endpoint: string;
+  status: ApiCallStatus;
+  tokens_used?: number;
+  cost_estimate?: number;
+}): Promise<void> {
+  await sb().from("api_usage_log").insert({
+    user_id: input.user_id,
+    service: input.service,
+    endpoint: input.endpoint,
+    status: input.status,
+    tokens_used: input.tokens_used ?? 0,
+    cost_estimate: input.cost_estimate ?? 0,
+  });
+}
+
+export async function listApiUsage(limit = 50): Promise<ApiUsageLog[]> {
+  return must(
+    await sb().from("api_usage_log").select("*").order("called_at", { ascending: false }).limit(limit),
+  ) as ApiUsageLog[];
+}
+
+// ── projects ──────────────────────────────────────────────────────────────────
+export async function createProject(input: {
+  user_id: string;
+  name: string;
+  description?: string;
+  flow_type?: string;
+}): Promise<Project> {
+  return must(
+    await sb()
+      .from("projects")
+      .insert({
+        user_id: input.user_id,
+        name: input.name,
+        description: input.description ?? null,
+        flow_type: input.flow_type ?? "custom",
+        status: "draft",
+      })
+      .select("*")
+      .single(),
+  ) as Project;
+}
+
+export async function listProjects(userId: string): Promise<Project[]> {
+  return must(
+    await sb().from("projects").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+  ) as Project[];
+}
+
+export async function getProject(id: string): Promise<Project | undefined> {
+  const { data } = await sb().from("projects").select("*").eq("id", id).maybeSingle();
+  return (data as Project) ?? undefined;
+}
+
+export async function updateProjectStatus(id: string, status: ProjectStatus): Promise<void> {
+  await sb().from("projects").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+}
+
+export async function updateProject(
+  id: string,
+  patch: Partial<Pick<Project, "name" | "description" | "flow_type">>,
+): Promise<Project | undefined> {
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.name) update.name = patch.name;
+  if (patch.description !== undefined) update.description = patch.description;
+  if (patch.flow_type !== undefined) update.flow_type = patch.flow_type;
+  const { data } = await sb().from("projects").update(update).eq("id", id).select("*").maybeSingle();
+  return (data as Project) ?? undefined;
+}
+
+// ── screenshots ───────────────────────────────────────────────────────────────
+export async function addScreenshots(
+  rows: Array<{
+    project_id: string;
+    type: ScreenshotType;
+    sequence_order: number;
+    file_name: string;
+    file_path: string;
+    screen_label: string | null;
+  }>,
+): Promise<Screenshot[]> {
+  return must(await sb().from("screenshots").insert(rows).select("*")) as Screenshot[];
+}
+
+export async function listScreenshots(projectId: string): Promise<Screenshot[]> {
+  return must(
+    await sb().from("screenshots").select("*").eq("project_id", projectId).order("type").order("sequence_order"),
+  ) as Screenshot[];
+}
+
+// ── analyses ──────────────────────────────────────────────────────────────────
+export async function createAnalysis(input: {
+  project_id: string;
+  status: AnalysisStatus;
+  before_summary?: string | null;
+  after_summary?: string | null;
+  flow_diff?: FlowDiff | null;
+  raw_gemini_response?: unknown;
+  raw_claude_response?: unknown;
+  processing_time_ms?: number | null;
+}): Promise<Analysis> {
+  return must(
+    await sb()
+      .from("analyses")
+      .insert({
+        project_id: input.project_id,
+        status: input.status,
+        before_summary: input.before_summary ?? null,
+        after_summary: input.after_summary ?? null,
+        flow_diff: input.flow_diff ?? null,
+        raw_gemini_response: input.raw_gemini_response ?? null,
+        raw_claude_response: input.raw_claude_response ?? null,
+        processing_time_ms: input.processing_time_ms ?? null,
+      })
+      .select("*")
+      .single(),
+  ) as Analysis;
+}
+
+export async function getAnalysis(id: string): Promise<Analysis | undefined> {
+  const { data } = await sb().from("analyses").select("*").eq("id", id).maybeSingle();
+  return (data as Analysis) ?? undefined;
+}
+
+export async function getLatestAnalysis(projectId: string): Promise<Analysis | undefined> {
+  const { data } = await sb()
+    .from("analyses")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as Analysis) ?? undefined;
+}
+
+// ── personas ──────────────────────────────────────────────────────────────────
+export async function addPersonas(rows: Array<Omit<Persona, "id" | "created_at">>): Promise<Persona[]> {
+  // experience_years/device_preference are optional extras (migration 0002). Persist them when the
+  // columns exist; otherwise retry without them so it works on the base schema (migration 0001).
+  const first = await sb().from("personas").insert(rows).select("*");
+  if (!first.error) return first.data as Persona[];
+  if (/experience_years|device_preference/.test(first.error.message)) {
+    const base = rows.map(({ experience_years: _e, device_preference: _d, ...r }) => r);
+    return must(await sb().from("personas").insert(base).select("*")) as Persona[];
+  }
+  throw new Error(`Supabase: ${first.error.message}`);
+}
+
+export async function getPersona(id: string): Promise<Persona | undefined> {
+  const { data } = await sb().from("personas").select("*").eq("id", id).maybeSingle();
+  return (data as Persona) ?? undefined;
+}
+
+export async function listPersonas(userId: string, projectId?: string): Promise<Persona[]> {
+  // Templates (global) + the user's own personas; if a project is given, restrict the user's set
+  // to that project or their library (null project_id).
+  const { data } = await sb()
+    .from("personas")
+    .select("*")
+    .or(`is_template.eq.true,user_id.eq.${userId}`)
+    .order("created_at", { ascending: false });
+  let rows = (data as Persona[]) ?? [];
+  if (projectId) {
+    rows = rows.filter(
+      (p) => p.is_template || p.user_id !== userId || p.project_id === projectId || p.project_id === null,
+    );
+  }
+  return rows;
+}
+
+export async function saveToLibrary(id: string): Promise<Persona | undefined> {
+  const { data } = await sb().from("personas").update({ project_id: null }).eq("id", id).select("*").maybeSingle();
+  return (data as Persona) ?? undefined;
+}
+
+// ── synthetic test results ────────────────────────────────────────────────────
+export async function addTestResult(
+  input: Omit<SyntheticTestResult, "id" | "tested_at">,
+): Promise<SyntheticTestResult> {
+  return must(await sb().from("synthetic_test_results").insert(input).select("*").single()) as SyntheticTestResult;
+}
+
+export async function listTestResults(projectId: string): Promise<SyntheticTestResult[]> {
+  return must(
+    await sb().from("synthetic_test_results").select("*").eq("project_id", projectId).order("tested_at"),
+  ) as SyntheticTestResult[];
+}
+
+// ── kpi matrices ────────────────────────────────────────────────────────────────
+export async function createKpiMatrix(input: {
+  analysis_id: string;
+  project_id: string;
+  kpis: KPI[];
+  overall_confidence: number;
+}): Promise<KPIMatrix> {
+  return must(
+    await sb()
+      .from("kpi_matrices")
+      .insert({
+        analysis_id: input.analysis_id,
+        project_id: input.project_id,
+        kpis: input.kpis,
+        overall_confidence: input.overall_confidence,
+      })
+      .select("*")
+      .single(),
+  ) as KPIMatrix;
+}
+
+export async function getKpiMatrixByProject(projectId: string): Promise<KPIMatrix | undefined> {
+  const { data } = await sb()
+    .from("kpi_matrices")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as KPIMatrix) ?? undefined;
+}
+
+// ── reports ───────────────────────────────────────────────────────────────────
+export async function createReport(input: {
+  project_id: string;
+  kpi_matrix_id: string;
+  annotations?: AnnotationMap;
+}): Promise<Report> {
+  return must(
+    await sb()
+      .from("reports")
+      .insert({
+        project_id: input.project_id,
+        kpi_matrix_id: input.kpi_matrix_id,
+        annotations: input.annotations ?? {},
+      })
+      .select("*")
+      .single(),
+  ) as Report;
+}
+
+export async function getReportByProject(projectId: string): Promise<Report | undefined> {
+  const { data } = await sb()
+    .from("reports")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as Report) ?? undefined;
+}
+
+export async function getReportByShareToken(token: string): Promise<Report | undefined> {
+  const { data } = await sb().from("reports").select("*").eq("share_token", token).maybeSingle();
+  return (data as Report) ?? undefined;
+}
+
+export async function getReport(id: string): Promise<Report | undefined> {
+  const { data } = await sb().from("reports").select("*").eq("id", id).maybeSingle();
+  return (data as Report) ?? undefined;
+}
+
+export async function updateReportAnnotations(
+  id: string,
+  annotations: AnnotationMap,
+): Promise<Report | undefined> {
+  const { data } = await sb().from("reports").update({ annotations }).eq("id", id).select("*").maybeSingle();
+  return (data as Report) ?? undefined;
+}

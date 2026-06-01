@@ -3,12 +3,15 @@ import { initials } from "@/lib/utils/initials";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 
-export default function DashboardLayout({
+// Data-driven (reads the current user / DB per request) — never statically prerender.
+export const dynamic = "force-dynamic";
+
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = getCurrentUser();
+  const user = await getCurrentUser();
   return (
     <div className="app">
       <Sidebar

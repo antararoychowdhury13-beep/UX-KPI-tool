@@ -2,8 +2,8 @@ import { listUsers } from "@/lib/db";
 import { initials } from "@/lib/utils/initials";
 import { QuotaEditor } from "@/components/admin/QuotaEditor";
 
-export default function AdminUsersPage() {
-  const users = listUsers();
+export default async function AdminUsersPage() {
+  const users = await listUsers();
 
   return (
     <>

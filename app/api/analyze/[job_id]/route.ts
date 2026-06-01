@@ -12,6 +12,6 @@ export async function GET(
   if (!job) {
     return NextResponse.json({ error: "Unknown job" }, { status: 404 });
   }
-  const analysis = job.analysis_id ? getAnalysis(job.analysis_id) : null;
+  const analysis = job.analysis_id ? await getAnalysis(job.analysis_id) : null;
   return NextResponse.json({ job, analysis });
 }

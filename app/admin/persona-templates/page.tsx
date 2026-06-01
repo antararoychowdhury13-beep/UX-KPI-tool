@@ -2,9 +2,9 @@ import { listPersonas } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 import { PersonaCard } from "@/components/persona/PersonaCard";
 
-export default function AdminPersonaTemplatesPage() {
+export default async function AdminPersonaTemplatesPage() {
   // Global templates available to all users (is_template = true).
-  const templates = listPersonas(getCurrentUserId()).filter((p) => p.is_template);
+  const templates = (await listPersonas(getCurrentUserId())).filter((p) => p.is_template);
 
   return (
     <>

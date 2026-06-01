@@ -12,14 +12,21 @@ const FLOW_ICON: Record<string, { icon: string; bg: string; color: string }> = {
   custom: { icon: "ti-square-rounded", bg: "var(--surface2)", color: "var(--text3)" },
 };
 
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
   const userId = getCurrentUserId();
-  const projects = listProjects(userId);
+  const projects = await listProjects(userId);
   const counts = {
     completed: projects.filter((p) => p.status === "completed").length,
     processing: projects.filter((p) => p.status === "processing").length,
     draft: projects.filter((p) => p.status === "draft").length,
   };
+  const cards = await Promise.all(
+    projects.map(async (p) => ({
+      project: p,
+      screens: (await listScreenshots(p.id)).length,
+      personas: (await listPersonas(userId, p.id)).filter((x) => x.project_id === p.id).length,
+    })),
+  );
 
   return (
     <>
@@ -37,10 +44,8 @@ export default function ProjectsPage() {
       </div>
 
       <div className="proj-grid">
-        {projects.map((p) => {
+        {cards.map(({ project: p, screens, personas }) => {
           const meta = FLOW_ICON[String(p.flow_type)] ?? FLOW_ICON.custom;
-          const screens = listScreenshots(p.id).length;
-          const personas = listPersonas(userId, p.id).filter((x) => x.project_id === p.id).length;
           return (
             <Link key={p.id} href={`/projects/${p.id}`} className="proj-card">
               <div className="proj-card-top">

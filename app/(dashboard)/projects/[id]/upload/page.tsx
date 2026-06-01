@@ -8,11 +8,11 @@ import { updateProjectSettings } from "./actions";
 
 const FLOW_TYPES = ["dashboard", "onboarding", "settings", "form", "navigation", "custom"];
 
-export default function UploadPage({ params }: { params: { id: string } }) {
-  const project = getProject(params.id);
+export default async function UploadPage({ params }: { params: { id: string } }) {
+  const project = await getProject(params.id);
   if (!project) notFound();
 
-  const screenshots = listScreenshots(project.id);
+  const screenshots = await listScreenshots(project.id);
   const before = screenshots.filter((s) => s.type === "before");
   const after = screenshots.filter((s) => s.type === "after");
   const canAnalyze = before.length > 0 && after.length > 0;

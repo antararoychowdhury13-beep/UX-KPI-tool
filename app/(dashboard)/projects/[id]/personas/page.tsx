@@ -6,12 +6,12 @@ import { StepRow } from "@/components/layout/StepRow";
 import { PersonaCard } from "@/components/persona/PersonaCard";
 import { PersonaGenerator } from "@/components/persona/PersonaGenerator";
 
-export default function PersonasPage({ params }: { params: { id: string } }) {
-  const project = getProject(params.id);
+export default async function PersonasPage({ params }: { params: { id: string } }) {
+  const project = await getProject(params.id);
   if (!project) notFound();
 
   const userId = getCurrentUserId();
-  const personas = listPersonas(userId, project.id).filter((p) => p.project_id === project.id);
+  const personas = (await listPersonas(userId, project.id)).filter((p) => p.project_id === project.id);
 
   return (
     <>

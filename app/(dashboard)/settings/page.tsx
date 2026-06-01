@@ -2,8 +2,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { initials } from "@/lib/utils/initials";
 import { hasSupabase, hasAnthropic, hasGemini, hasHuggingFace, hasRedis } from "@/lib/config";
 
-export default function SettingsPage() {
-  const user = getCurrentUser();
+export default async function SettingsPage() {
+  const user = await getCurrentUser();
   const services: Array<[string, boolean]> = [
     ["Supabase (data/auth/storage)", hasSupabase],
     ["Anthropic Claude", hasAnthropic],

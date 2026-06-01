@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "smoke": "tsx scripts/smoke.ts",
+    "seed:supabase": "node scripts/seed-supabase.mjs",
     "worker": "tsx lib/queue/workers/index.ts"
   },
   "dependencies": {

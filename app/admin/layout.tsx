@@ -2,9 +2,11 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { AdminNav } from "@/components/layout/AdminNav";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export const dynamic = "force-dynamic";
+
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Admin-only. Demo user is an admin; real auth enforces this against the users table.
-  if (getCurrentUser().role !== "admin") redirect("/dashboard");
+  if ((await getCurrentUser()).role !== "admin") redirect("/dashboard");
 
   return (
     <div className="app">

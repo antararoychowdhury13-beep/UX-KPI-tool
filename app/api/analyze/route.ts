@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const body = await readJson<{ projectId?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
   const { projectId } = body;
-  if (!projectId || !getProject(projectId)) {
+  if (!projectId || !(await getProject(projectId))) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
 
@@ -21,14 +21,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }
 
-  if (!hasQuota(userId)) {
+  if (!(await hasQuota(userId))) {
     return NextResponse.json(
       { error: "Analysis quota exhausted. Ask an admin to raise your quota." },
       { status: 402 },
     );
   }
 
-  const screenshots = listScreenshots(projectId);
+  const screenshots = await listScreenshots(projectId);
   const hasBefore = screenshots.some((s) => s.type === "before");
   const hasAfter = screenshots.some((s) => s.type === "after");
   if (!hasBefore || !hasAfter) {
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   }
 
   const jobId = await enqueueAnalysis(projectId);
-  incrementQuotaUsed(userId);
-  logApiUsage({ user_id: userId, service: "gemini", endpoint: "/api/analyze", status: "success" });
+  await incrementQuotaUsed(userId);
+  await logApiUsage({ user_id: userId, service: "gemini", endpoint: "/api/analyze", status: "success" });
   return NextResponse.json({ jobId }, { status: 202 });
 }
