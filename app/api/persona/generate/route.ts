@@ -1,0 +1,63 @@
+// POST /api/persona/generate — generate synthetic personas via Claude and attach them to a project.
+import { NextResponse } from "next/server";
+import { getProject, addPersonas, logApiUsage } from "@/lib/db";
+import { generatePersonas } from "@/lib/ai/claude";
+import { getCurrentUserId } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/utils/rateLimiter";
+import { readJson, badRequest } from "@/lib/http";
+import type { Persona, TechComfort } from "@/types/persona";
+
+export const runtime = "nodejs";
+
+export async function POST(req: Request) {
+  const body = await readJson<{
+    projectId?: string;
+    count?: number;
+    productType?: string;
+    demographics?: string;
+    traits?: string;
+    techComfort?: string;
+  }>(req);
+  if (!body) return badRequest("Invalid JSON body");
+
+  if (!body.projectId || !getProject(body.projectId)) {
+    return NextResponse.json({ error: "Unknown project" }, { status: 404 });
+  }
+
+  const userId = getCurrentUserId();
+  if (!(await checkRateLimit(userId))) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+  }
+
+  const count = Math.max(1, Math.min(body.count ?? 3, 10));
+  const generated = await generatePersonas({
+    count,
+    flowDescription: getProject(body.projectId)!.description ?? "",
+    productType: body.productType ?? "Enterprise Software",
+    demographics: body.demographics ?? "",
+    traits: body.traits ?? "",
+    techComfort: body.techComfort ?? "low to high",
+  });
+
+  const rows: Array<Omit<Persona, "id" | "created_at">> = generated.map((g) => ({
+    user_id: userId,
+    project_id: body.projectId!,
+    name: g.name,
+    age_range: String(g.age),
+    gender: g.gender,
+    occupation: g.occupation,
+    tech_comfort: g.tech_comfort as TechComfort,
+    behavioral_traits: g.behavioral_traits,
+    goals: g.primary_goal,
+    frustrations: g.key_frustration,
+    experience_years: g.experience_years,
+    device_preference: g.device_preference,
+    is_template: false,
+    is_synthetic: true,
+    generated_by_ai: true,
+  }));
+
+  const personas = addPersonas(rows);
+  logApiUsage({ user_id: userId, service: "claude", endpoint: "/api/persona/generate", status: "success" });
+  return NextResponse.json({ personas }, { status: 201 });
+}
