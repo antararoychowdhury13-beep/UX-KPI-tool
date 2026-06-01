@@ -3,6 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FlowContext } from "@/types/flow";
+import { AiProgress, useStepProgress, type AiStep } from "@/components/ai/AiProgress";
+
+const FLOW_STEPS: AiStep[] = [
+  { chip: "reading context", label: "Reading flow description" },
+  { chip: "identifying roles", label: "Identifying user roles from context" },
+  { chip: "mapping demographics", label: "Mapping enterprise persona archetypes" },
+  { chip: "assigning traits", label: "Assigning demographic + behavioural traits" },
+];
+const PERSONA_STEPS: AiStep[] = [
+  { chip: "reading config", label: "Reading flow description and persona config" },
+  { chip: "mapping roles", label: "Mapping enterprise roles to demographics" },
+  { chip: "adding traits", label: "Assigning behavioural traits and tech comfort" },
+  { chip: "writing backstories", label: "Writing persona backstories and motivations" },
+];
 
 const AGES = ["18–25", "26–35", "36–45", "46–55", "55+"];
 const GENDERS = ["Male", "Female", "Non-binary", "Mixed"];
@@ -77,6 +91,9 @@ export function PersonaGenerator({ projectId, hasPersonas }: { projectId: string
   const [error, setError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [flow, setFlow] = useState<FlowContext | null>(null);
+
+  const flowProg = useStepProgress(FLOW_STEPS.length, analyzing);
+  const genProg = useStepProgress(PERSONA_STEPS.length, busy);
 
   const allTraits = Array.from(new Set([...TRAITS, ...extraTraits]));
   const toggler = (set: React.Dispatch<React.SetStateAction<string[]>>) => (v: string) =>
@@ -159,6 +176,12 @@ export function PersonaGenerator({ projectId, hasPersonas }: { projectId: string
         </button>
       </div>
 
+      {analyzing && (
+        <div style={{ marginBottom: 14 }}>
+          <AiProgress steps={FLOW_STEPS} step={flowProg.step} progress={flowProg.progress} tone="cyan" />
+        </div>
+      )}
+
       {flow && (
         <div className="flow-insight">
           <div className="fi-title">
@@ -206,6 +229,12 @@ export function PersonaGenerator({ projectId, hasPersonas }: { projectId: string
         <ChipGroup icon="ti-accessible" label="Accessibility" options={ACCESS} selected={access} onToggle={toggler(setAccess)} />
         <ChipGroup icon="ti-brain" label="Behavioural traits" options={allTraits} selected={traits} onToggle={toggler(setTraits)} />
       </div>
+
+      {busy && (
+        <div style={{ marginTop: 14 }}>
+          <AiProgress steps={PERSONA_STEPS} step={genProg.step} progress={genProg.progress} tone="green" />
+        </div>
+      )}
 
       <div className="inline-actions">
         {error && <span style={{ fontSize: 11, color: "var(--red-text)", marginRight: "auto" }}>{error}</span>}

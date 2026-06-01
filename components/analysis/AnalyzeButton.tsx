@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AiProgress, useStepProgress, type AiStep } from "@/components/ai/AiProgress";
 
 // Display steps for the AI status bar (spec v2 §5 analyzeScreenshots sequence).
-const STEPS = ["reading before", "reading after", "diffing flows", "extracting changes", "summarizing"];
+const ANALYZE_STEPS: AiStep[] = [
+  { chip: "reading before", label: "Reading the before screens" },
+  { chip: "reading after", label: "Reading the after screens" },
+  { chip: "diffing flows", label: "Diffing the before / after flows" },
+  { chip: "extracting changes", label: "Extracting the key UI changes" },
+  { chip: "summarizing", label: "Summarising the redesign" },
+];
 
 export function AnalyzeButton({
   projectId,
@@ -18,24 +25,8 @@ export function AnalyzeButton({
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState(0);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const busy = !!status;
-
-  // Cycle the status-bar steps while a run is in flight (inline analysis is one await, so the
-  // chips are a progress affordance rather than real per-step events).
-  useEffect(() => {
-    if (busy) {
-      timer.current = setInterval(() => setStep((s) => (s + 1) % STEPS.length), 1100);
-    } else {
-      if (timer.current) clearInterval(timer.current);
-      setStep(0);
-    }
-    return () => {
-      if (timer.current) clearInterval(timer.current);
-    };
-  }, [busy]);
+  const prog = useStepProgress(ANALYZE_STEPS.length, busy, 1100);
 
   async function run() {
     setError(null);
@@ -88,18 +79,8 @@ export function AnalyzeButton({
   return (
     <>
       {busy && (
-        <div className="ai-bar">
-          <div className="ai-pulse" />
-          <div className="ai-label">
-            Analysing screens — <b>{STEPS[step]}</b>…
-          </div>
-          <div className="ai-steps">
-            {STEPS.map((s, i) => (
-              <span key={s} className={`ai-step ${i < step ? "done" : i === step ? "curr" : "todo"}`}>
-                {s}
-              </span>
-            ))}
-          </div>
+        <div style={{ marginBottom: 14 }}>
+          <AiProgress steps={ANALYZE_STEPS} step={prog.step} progress={prog.progress} tone="cyan" />
         </div>
       )}
 

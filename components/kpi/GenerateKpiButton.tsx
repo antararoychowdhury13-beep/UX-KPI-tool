@@ -2,6 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AiProgress, useStepProgress, type AiStep } from "@/components/ai/AiProgress";
+
+const KPI_STEPS: AiStep[] = [
+  { chip: "loading tests", label: "Loading synthetic test results" },
+  { chip: "aggregating", label: "Aggregating per-persona scores" },
+  { chip: "inferring KPIs", label: "Inferring KPIs across categories" },
+  { chip: "UX score", label: "Computing the composite UX score" },
+  { chip: "recommendations", label: "Writing recommendations and tracking plan" },
+];
 
 export function GenerateKpiButton({
   projectId,
@@ -13,6 +22,7 @@ export function GenerateKpiButton({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const prog = useStepProgress(KPI_STEPS.length, busy);
 
   async function run() {
     setBusy(true);
@@ -29,11 +39,18 @@ export function GenerateKpiButton({
   }
 
   return (
-    <div className="inline-actions" style={{ border: "none", marginTop: 0, paddingTop: 0 }}>
-      {error && <span style={{ fontSize: 11, color: "var(--red-text)", marginRight: "auto" }}>{error}</span>}
-      <button className="tb-btn primary" onClick={run} disabled={busy}>
-        <i className="ti ti-wand" /> {busy ? "Generating…" : label}
-      </button>
-    </div>
+    <>
+      {busy && (
+        <div style={{ marginBottom: 14 }}>
+          <AiProgress steps={KPI_STEPS} step={prog.step} progress={prog.progress} tone="blue" />
+        </div>
+      )}
+      <div className="inline-actions" style={{ border: "none", marginTop: 0, paddingTop: 0 }}>
+        {error && <span style={{ fontSize: 11, color: "var(--red-text)", marginRight: "auto" }}>{error}</span>}
+        <button className="tb-btn primary" onClick={run} disabled={busy}>
+          <i className={`ti ${busy ? "ti-loader-2" : "ti-wand"}`} /> {busy ? "Generating…" : label}
+        </button>
+      </div>
+    </>
   );
 }
