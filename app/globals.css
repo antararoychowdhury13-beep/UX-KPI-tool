@@ -186,6 +186,22 @@ body {
   .tmb-right { display: flex; align-items: center; gap: 6px; }
   .tmb-badge { font-size: 10px; padding: 3px 8px; border-radius: 10px; background: rgba(0,229,255,.1); color: var(--accentfg); font-family: "DM Mono", monospace; }
 
+  /* v2 notifications */
+  .notif { position: relative; }
+  .notif-dot { position: absolute; top: -5px; right: -5px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; background: var(--red); color: #fff; font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .notif-panel { position: absolute; top: calc(100% + 6px); right: 0; width: 300px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); box-shadow: var(--shadow-md); z-index: 50; overflow: hidden; }
+  .notif-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; }
+  .notif-markall { border: none; background: transparent; color: var(--blue-text); font-size: 11px; cursor: pointer; font-family: inherit; }
+  .notif-list { max-height: 300px; overflow-y: auto; }
+  .notif-item { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .notif-item i { font-size: 14px; color: var(--text3); flex-shrink: 0; margin-top: 1px; }
+  .notif-item.unread { background: var(--blue-light); }
+  .notif-item.unread i { color: var(--blue-text); }
+  .notif-msg { color: var(--text2); line-height: 1.4; }
+  .notif-empty { padding: 20px 12px; text-align: center; font-size: 12px; color: var(--text3); }
+  .notif-foot { display: block; text-align: center; padding: 9px; font-size: 12px; color: var(--blue-text); border-top: 1px solid var(--border); }
+  .notif-dot-sm { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); flex-shrink: 0; }
+
   .badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
   .b-done { background: var(--green-light); color: var(--green-text); }
   .b-proc { background: var(--amber-light); color: var(--amber-text); }

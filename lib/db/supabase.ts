@@ -16,6 +16,7 @@ import type {
 import type { Persona, SyntheticTestResult } from "@/types/persona";
 import type { KPI, KPIMatrix } from "@/types/kpi";
 import type { Organisation } from "@/types/organisation";
+import type { AppNotification } from "@/types/notification";
 import type { AnnotationMap, ApiCallStatus, ApiService, ApiUsageLog, Report } from "@/types/report";
 
 let client: SupabaseClient | null = null;
@@ -76,6 +77,48 @@ export async function ensureUser(input: {
 
 export async function listUsers(): Promise<User[]> {
   return must(await sb().from("users").select("*").order("created_at")) as User[];
+}
+
+// ── notifications (spec v2 §3) — all best-effort so a missing table never breaks a request ──
+export async function createNotification(input: {
+  user_id: string;
+  type: string;
+  project_id?: string | null;
+  message: string;
+}): Promise<void> {
+  try {
+    await sb().from("notifications").insert({
+      user_id: input.user_id,
+      type: input.type,
+      project_id: input.project_id ?? null,
+      message: input.message,
+    });
+  } catch {
+    /* table may not exist pre-migration 0006 */
+  }
+}
+export async function listNotifications(userId: string): Promise<AppNotification[]> {
+  const { data } = await sb()
+    .from("notifications")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  return (data as AppNotification[]) ?? [];
+}
+export async function markNotificationRead(id: string, userId: string): Promise<void> {
+  try {
+    await sb().from("notifications").update({ is_read: true }).eq("id", id).eq("user_id", userId);
+  } catch {
+    /* noop */
+  }
+}
+export async function markAllNotificationsRead(userId: string): Promise<void> {
+  try {
+    await sb().from("notifications").update({ is_read: true }).eq("user_id", userId).eq("is_read", false);
+  } catch {
+    /* noop */
+  }
 }
 
 // ── organisations (spec v2 §3) ───────────────────────────────────────────────────

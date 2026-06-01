@@ -20,6 +20,7 @@ import type { Persona } from "@/types/persona";
 import type { SyntheticTestResult } from "@/types/persona";
 import type { KPI, KPIMatrix } from "@/types/kpi";
 import type { Organisation } from "@/types/organisation";
+import type { AppNotification } from "@/types/notification";
 import type { AnnotationMap, Report, ApiUsageLog, ApiService, ApiCallStatus, AIService } from "@/types/report";
 
 export interface AnalysisJob {
@@ -44,6 +45,7 @@ interface Store {
   jobs: Map<string, AnalysisJob>;
   apiUsage: ApiUsageLog[];
   aiServices: Map<string, AIService>;
+  notifications: AppNotification[];
 }
 
 const MOCK_USER_ID = "00000000-0000-0000-0000-000000000001";
@@ -62,6 +64,7 @@ function seed(): Store {
     jobs: new Map(),
     apiUsage: [],
     aiServices: new Map(),
+    notifications: [],
   };
 
   const builtinServices: Array<Omit<AIService, "id" | "created_at">> = [
@@ -322,6 +325,36 @@ export function ensureOrgForUser(user: User): Organisation | null {
   const u = db.users.get(user.id);
   if (u) db.users.set(u.id, { ...u, org_id: org.id });
   return org;
+}
+
+// ── notifications ───────────────────────────────────────────────────────────────
+export function createNotification(input: {
+  user_id: string;
+  type: string;
+  project_id?: string | null;
+  message: string;
+}): void {
+  db.notifications.unshift({
+    id: uuid(),
+    user_id: input.user_id,
+    type: input.type as AppNotification["type"],
+    project_id: input.project_id ?? null,
+    message: input.message,
+    is_read: false,
+    created_at: now(),
+  });
+}
+export function listNotifications(userId: string): AppNotification[] {
+  return db.notifications.filter((n) => n.user_id === userId).slice(0, 50);
+}
+export function markNotificationRead(id: string, userId: string): void {
+  const n = db.notifications.find((x) => x.id === id && x.user_id === userId);
+  if (n) n.is_read = true;
+}
+export function markAllNotificationsRead(userId: string): void {
+  db.notifications.forEach((n) => {
+    if (n.user_id === userId) n.is_read = true;
+  });
 }
 
 /** Aggregate counts for the admin overview. */

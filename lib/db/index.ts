@@ -37,6 +37,11 @@ export const getOrganisation = pick(sb.getOrganisation, mem.getOrganisation);
 export const listOrganisations = pick(sb.listOrganisations, mem.listOrganisations);
 export const listOrgMembers = pick(sb.listOrgMembers, mem.listOrgMembers);
 export const ensureOrgForUser = pick(sb.ensureOrgForUser, mem.ensureOrgForUser);
+
+export const createNotification = pick(sb.createNotification, mem.createNotification);
+export const listNotifications = pick(sb.listNotifications, mem.listNotifications);
+export const markNotificationRead = pick(sb.markNotificationRead, mem.markNotificationRead);
+export const markAllNotificationsRead = pick(sb.markAllNotificationsRead, mem.markAllNotificationsRead);
 export const adminStats = pick(sb.adminStats, mem.adminStats);
 export const hasQuota = pick(sb.hasQuota, mem.hasQuota);
 export const incrementQuotaUsed = pick(sb.incrementQuotaUsed, mem.incrementQuotaUsed);

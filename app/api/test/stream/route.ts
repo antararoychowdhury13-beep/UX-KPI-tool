@@ -1,7 +1,7 @@
 // POST /api/test/stream — run synthetic testing and stream per-persona progress over SSE
 // (spec v2 §5). Same work as /api/test, but emits a step event as each persona/flow completes.
 import { NextResponse } from "next/server";
-import { getLatestAnalysis, listPersonas, addTestResult, logApiUsage } from "@/lib/db";
+import { getLatestAnalysis, listPersonas, addTestResult, logApiUsage, createNotification } from "@/lib/db";
 import { runSyntheticTest } from "@/lib/ai/claude";
 import { resolveTextProvider } from "@/lib/ai/providers";
 import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
@@ -78,6 +78,12 @@ export async function POST(req: Request) {
       service: resolveTextProvider()?.slug ?? "claude",
       endpoint: "/api/test/stream",
       status: "success",
+    });
+    await createNotification({
+      user_id: userId,
+      type: "testing_complete",
+      project_id: project.id,
+      message: `Synthetic testing finished for "${project.name}" across ${personas.length} personas.`,
     });
     emit({ type: "step", label: "Finalising results", progress: 100 });
     emit({ type: "done" });

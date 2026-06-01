@@ -6,6 +6,7 @@ import {
   listPersonas,
   addTestResult,
   logApiUsage,
+  createNotification,
 } from "@/lib/db";
 import { runSyntheticTest } from "@/lib/ai/claude";
 import { resolveTextProvider } from "@/lib/ai/providers";
@@ -78,5 +79,6 @@ export async function POST(req: Request) {
   }
 
   await logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/test", status: "success" });
+  await createNotification({ user_id: userId, type: "testing_complete", project_id: project.id, message: `Synthetic testing finished for "${project.name}" across ${personas.length} personas.` });
   return NextResponse.json({ results }, { status: 201 });
 }

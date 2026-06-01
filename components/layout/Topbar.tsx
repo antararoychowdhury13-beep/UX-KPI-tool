@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 
 const TITLES: Array<[RegExp, string]> = [
   [/^\/dashboard$/, "Dashboard"],
@@ -30,7 +31,8 @@ export function Topbar() {
           <b>Active project</b>
         </div>
       )}
-      <div style={{ display: "flex", gap: 7 }}>
+      <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+        <NotificationBell />
         <Link href="/projects" className="tb-btn">
           <i className="ti ti-folder" /> Projects
         </Link>

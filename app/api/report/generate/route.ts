@@ -1,6 +1,6 @@
 // POST /api/report/generate — assemble a report from the project's latest KPI matrix.
 import { NextResponse } from "next/server";
-import { getKpiMatrixByProject, createReport } from "@/lib/db";
+import { getKpiMatrixByProject, createReport, createNotification } from "@/lib/db";
 import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
 
@@ -25,5 +25,6 @@ export async function POST(req: Request) {
   }
 
   const report = await createReport({ project_id: projectId, kpi_matrix_id: matrix.id });
+  await createNotification({ user_id: userId, type: "report_ready", project_id: projectId, message: "Your UX impact report is ready to view and share." });
   return NextResponse.json({ report }, { status: 201 });
 }

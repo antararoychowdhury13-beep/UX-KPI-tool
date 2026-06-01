@@ -6,6 +6,7 @@ import {
   listTestResults,
   createKpiMatrix,
   logApiUsage,
+  createNotification,
 } from "@/lib/db";
 import { generateKpiMatrix } from "@/lib/ai/claude";
 import { resolveTextProvider } from "@/lib/ai/providers";
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
     ux_score_delta: uxAfter - uxBefore,
   });
   await logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/kpi", status: "success" });
+  await createNotification({ user_id: userId, type: "kpi_ready", project_id: project.id, message: `KPI matrix ready for "${project.name}" — UX score ${uxAfter} (↑${uxAfter - uxBefore}).` });
 
   return NextResponse.json(
     {

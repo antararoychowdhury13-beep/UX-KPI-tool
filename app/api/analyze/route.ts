@@ -1,6 +1,6 @@
 // POST /api/analyze — queue (or inline-run) screenshot analysis for a project. Returns a job id.
 import { NextResponse } from "next/server";
-import { listScreenshots, hasQuota, incrementQuotaUsed, logApiUsage } from "@/lib/db";
+import { listScreenshots, hasQuota, incrementQuotaUsed, logApiUsage, createNotification } from "@/lib/db";
 import { enqueueAnalysis } from "@/lib/queue/analysisQueue";
 import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
@@ -44,5 +44,8 @@ export async function POST(req: Request) {
   const { jobId, status } = await enqueueAnalysis(projectId);
   await incrementQuotaUsed(userId);
   await logApiUsage({ user_id: userId, service: "gemini", endpoint: "/api/analyze", status: "success" });
+  if (status === "completed") {
+    await createNotification({ user_id: userId, type: "analysis_complete", project_id: projectId, message: "Screenshot analysis complete — personas are ready to generate." });
+  }
   return NextResponse.json({ jobId, status }, { status: 202 });
 }
