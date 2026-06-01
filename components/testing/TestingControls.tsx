@@ -17,19 +17,58 @@ export function TestingControls({
   const [method, setMethod] = useState<TestingMethod>(currentMethod);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [label, setLabel] = useState<string | null>(null);
 
   async function run() {
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId, method }),
-    });
-    const data = await res.json();
-    if (!res.ok) setError(data.error ?? "Testing failed");
-    else router.refresh();
-    setBusy(false);
+    setProgress(0);
+    setLabel("Starting…");
+    try {
+      const res = await fetch("/api/test/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, method }),
+      });
+      // Non-stream error responses (auth/rate/validation) come back as JSON.
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Testing failed");
+        setBusy(false);
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let finished = false;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const chunks = buf.split("\n\n");
+        buf = chunks.pop() ?? "";
+        for (const chunk of chunks) {
+          const line = chunk.split("\n").find((l) => l.startsWith("data:"));
+          if (!line) continue;
+          const evt = JSON.parse(line.slice(5).trim());
+          if (evt.type === "step") {
+            setLabel(evt.label);
+            setProgress(evt.progress ?? 0);
+          } else if (evt.type === "done") {
+            finished = true;
+          } else if (evt.type === "error") {
+            setError(evt.message ?? "Testing failed");
+          }
+        }
+      }
+      if (finished) router.refresh();
+    } catch {
+      setError("Testing failed");
+    } finally {
+      setBusy(false);
+      setLabel(null);
+    }
   }
 
   return (
@@ -52,6 +91,23 @@ export function TestingControls({
           </button>
         ))}
       </div>
+      {busy && label && (
+        <>
+          <div className="ai-bar">
+            <div className="ai-pulse" />
+            <div className="ai-label">{label}…</div>
+            <div className="ai-steps">
+              <span className="ai-step curr">{progress}%</span>
+            </div>
+          </div>
+          <div className="prog-wrap" style={{ marginBottom: 0 }}>
+            <div className="prog-track">
+              <div className="prog-fill cyan" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        </>
+      )}
+
       <div className="inline-actions">
         {error && <span style={{ fontSize: 11, color: "var(--red-text)", marginRight: "auto" }}>{error}</span>}
         <button className="tb-btn primary" onClick={run} disabled={busy}>
