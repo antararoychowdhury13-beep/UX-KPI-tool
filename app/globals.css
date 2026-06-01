@@ -234,6 +234,20 @@ body {
   .step-lbl.curr { color: var(--text); font-weight: 500; }
   .step-line { width: 24px; height: 1px; background: var(--border); flex-shrink: 0; }
   .step-line.done { background: var(--blue); }
+  /* One-shot "step finished" animation on the freshly-completed dot + its incoming line */
+  .step-dot.sd-pop { animation: stepPop .5s cubic-bezier(.34, 1.56, .64, 1) both; }
+  .step-dot.sd-pop i { animation: stepCheck .4s ease .12s both; transform-origin: center; }
+  @keyframes stepPop {
+    0% { transform: scale(.5); box-shadow: 0 0 0 0 rgba(37, 99, 235, .45); }
+    60% { transform: scale(1.18); box-shadow: 0 0 0 6px rgba(37, 99, 235, .12); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+  }
+  @keyframes stepCheck {
+    0% { opacity: 0; transform: scale(.2) rotate(-25deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0); }
+  }
+  .step-line.done.anim { animation: lineFill .45s ease both; transform-origin: left center; }
+  @keyframes lineFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
   /* FORMS */
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
