@@ -62,10 +62,32 @@ export function TestingEngine({
   const [runStep, setRunStep] = useState(0); // 0..4 chip index
   const [error, setError] = useState<string | null>(null);
   const runRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     fetch("/api/models").then((r) => r.json()).then((d) => setModels(d.models ?? [])).catch(() => {});
   }, []);
+
+  // Load saved model assignments + custom tests for this project (self-healing → defaults).
+  useEffect(() => {
+    fetch(`/api/models/assign/${projectId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.assignments) setAssign({ ...DEFAULT_ASSIGNMENTS, ...d.assignments, method_overrides: d.assignments.method_overrides ?? {} });
+      })
+      .catch(() => {})
+      .finally(() => { loadedRef.current = true; });
+    fetch(`/api/test/custom?projectId=${projectId}`)
+      .then((r) => r.json())
+      .then((d) => setCustom((d.tests ?? []).map((t: { id: string; name: string; description: string; ai_model: string; scope: string }) => ({ id: t.id, name: t.name, desc: t.description, model: t.ai_model, scope: t.scope }))))
+      .catch(() => {});
+  }, [projectId]);
+
+  // Persist assignment changes (best-effort) once initial load is done.
+  useEffect(() => {
+    if (!loadedRef.current) return;
+    fetch(`/api/models/assign/${projectId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(assign) }).catch(() => {});
+  }, [assign, projectId]);
 
   const modelById = (id: string): ModelLite | undefined => models.find((m) => m.id === id);
   const dotColor = (id: string) => COLOR_VAR[modelById(id)?.color ?? "cyan"] ?? "var(--blue)";
@@ -286,7 +308,7 @@ export function TestingEngine({
             <div className="ct-icon"><i className="ti ti-checklist" /></div>
             <div className="ct-info"><div className="ct-n">{c.name}</div><div className="ct-d">{c.desc}</div></div>
             <div className="ct-model">{c.model}</div>
-            <i className="ti ti-trash ct-del" onClick={() => setCustom((x) => x.filter((y) => y.id !== c.id))} />
+            <i className="ti ti-trash ct-del" onClick={() => { fetch(`/api/test/custom/${c.id}`, { method: "DELETE" }).catch(() => {}); setCustom((x) => x.filter((y) => y.id !== c.id)); }} />
           </div>
         ))}
       </div>
@@ -340,7 +362,24 @@ export function TestingEngine({
         <AddCustomTestModal
           models={models}
           onClose={() => setModal(false)}
-          onAdd={(c) => { setCustom((x) => [...x, { ...c, id: `${Date.now()}` }]); setModal(false); }}
+          onAdd={async (c) => {
+            setModal(false);
+            try {
+              const res = await fetch("/api/test/custom", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ projectId, name: c.name, description: c.desc, ai_model: c.model, scope: c.scope }),
+              });
+              const d = await res.json();
+              if (res.ok && d.test) {
+                setCustom((x) => [{ id: d.test.id, name: d.test.name, desc: d.test.description, model: d.test.ai_model, scope: d.test.scope }, ...x]);
+                return;
+              }
+            } catch {
+              /* fall through to client-only */
+            }
+            setCustom((x) => [{ ...c, id: `${Date.now()}` }, ...x]);
+          }}
         />
       )}
     </div>

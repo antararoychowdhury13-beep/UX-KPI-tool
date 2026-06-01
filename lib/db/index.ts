@@ -51,6 +51,12 @@ export const createWebhook = pick(sb.createWebhook, mem.createWebhook);
 export const updateWebhook = pick(sb.updateWebhook, mem.updateWebhook);
 export const deleteWebhook = pick(sb.deleteWebhook, mem.deleteWebhook);
 export const markWebhookTriggered = pick(sb.markWebhookTriggered, mem.markWebhookTriggered);
+
+export const getModelAssignments = pick(sb.getModelAssignments, mem.getModelAssignments);
+export const saveModelAssignments = pick(sb.saveModelAssignments, mem.saveModelAssignments);
+export const listCustomTests = pick(sb.listCustomTests, mem.listCustomTests);
+export const createCustomTest = pick(sb.createCustomTest, mem.createCustomTest);
+export const deleteCustomTest = pick(sb.deleteCustomTest, mem.deleteCustomTest);
 export const adminStats = pick(sb.adminStats, mem.adminStats);
 export const hasQuota = pick(sb.hasQuota, mem.hasQuota);
 export const incrementQuotaUsed = pick(sb.incrementQuotaUsed, mem.incrementQuotaUsed);

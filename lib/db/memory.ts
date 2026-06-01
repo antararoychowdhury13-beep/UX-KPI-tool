@@ -23,6 +23,8 @@ import type { Organisation } from "@/types/organisation";
 import type { AppNotification } from "@/types/notification";
 import type { AuditEntry } from "@/types/audit";
 import type { WebhookSubscription } from "@/types/webhook";
+import type { CustomTest } from "@/types/testing";
+import type { ModelAssignments } from "@/types/models";
 import type { AnnotationMap, Report, ApiUsageLog, ApiService, ApiCallStatus, AIService } from "@/types/report";
 
 export interface AnalysisJob {
@@ -50,6 +52,8 @@ interface Store {
   notifications: AppNotification[];
   auditLog: AuditEntry[];
   webhooks: WebhookSubscription[];
+  modelAssignments: Map<string, ModelAssignments>;
+  customTests: CustomTest[];
 }
 
 const MOCK_USER_ID = "00000000-0000-0000-0000-000000000001";
@@ -71,6 +75,8 @@ function seed(): Store {
     notifications: [],
     auditLog: [],
     webhooks: [],
+    modelAssignments: new Map(),
+    customTests: [],
   };
 
   const builtinServices: Array<Omit<AIService, "id" | "created_at">> = [
@@ -418,6 +424,32 @@ export function markWebhookTriggered(id: string, ok: boolean): void {
   if (!w) return;
   if (ok) w.last_triggered_at = now();
   else w.failure_count += 1;
+}
+
+// ── v3: model assignments + custom tests ──────────────────────────────────────────
+export function getModelAssignments(projectId: string): ModelAssignments | null {
+  return db.modelAssignments.get(projectId) ?? null;
+}
+export function saveModelAssignments(projectId: string, a: ModelAssignments): void {
+  db.modelAssignments.set(projectId, a);
+}
+export function listCustomTests(projectId: string): CustomTest[] {
+  return db.customTests.filter((c) => c.project_id === projectId);
+}
+export function createCustomTest(input: {
+  user_id: string;
+  project_id: string;
+  name: string;
+  description: string;
+  ai_model: string;
+  scope: string;
+}): CustomTest {
+  const c: CustomTest = { id: uuid(), created_at: now(), ...input };
+  db.customTests.unshift(c);
+  return c;
+}
+export function deleteCustomTest(id: string, userId: string): void {
+  db.customTests = db.customTests.filter((c) => !(c.id === id && c.user_id === userId));
 }
 
 /** Aggregate counts for the admin overview. */

@@ -19,6 +19,8 @@ import type { Organisation } from "@/types/organisation";
 import type { AppNotification } from "@/types/notification";
 import type { AuditEntry } from "@/types/audit";
 import type { WebhookSubscription } from "@/types/webhook";
+import type { CustomTest } from "@/types/testing";
+import type { ModelAssignments } from "@/types/models";
 import type { AnnotationMap, ApiCallStatus, ApiService, ApiUsageLog, Report } from "@/types/report";
 
 let client: SupabaseClient | null = null;
@@ -148,6 +150,59 @@ export async function recordAudit(input: {
 export async function listAuditLog(limit = 100): Promise<AuditEntry[]> {
   const { data } = await sb().from("audit_log").select("*").order("created_at", { ascending: false }).limit(limit);
   return (data as AuditEntry[]) ?? [];
+}
+
+// ── v3: model assignments + custom tests (best-effort; null/[] pre-migration 0007) ──
+export async function getModelAssignments(projectId: string): Promise<ModelAssignments | null> {
+  try {
+    const { data, error } = await sb().from("ai_model_assignments").select("*").eq("project_id", projectId).maybeSingle();
+    if (error || !data) return null;
+    const r = data as Record<string, unknown>;
+    return {
+      vision: (r.step_vision as string) ?? "gemini-1.5-flash",
+      eval: (r.step_eval as string) ?? "claude-sonnet-4",
+      score: (r.step_score as string) ?? "claude-haiku-4",
+      kpi: (r.step_kpi as string) ?? "claude-sonnet-4",
+      method_overrides: (r.method_overrides as Record<string, string>) ?? {},
+    };
+  } catch {
+    return null;
+  }
+}
+export async function saveModelAssignments(projectId: string, a: ModelAssignments): Promise<void> {
+  try {
+    await sb().from("ai_model_assignments").upsert(
+      {
+        project_id: projectId,
+        step_vision: a.vision,
+        step_eval: a.eval,
+        step_score: a.score,
+        step_kpi: a.kpi,
+        method_overrides: a.method_overrides ?? {},
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "project_id" },
+    );
+  } catch {
+    /* table may not exist */
+  }
+}
+export async function listCustomTests(projectId: string): Promise<CustomTest[]> {
+  const { data } = await sb().from("custom_tests").select("*").eq("project_id", projectId).order("created_at");
+  return (data as CustomTest[]) ?? [];
+}
+export async function createCustomTest(input: {
+  user_id: string;
+  project_id: string;
+  name: string;
+  description: string;
+  ai_model: string;
+  scope: string;
+}): Promise<CustomTest> {
+  return must(await sb().from("custom_tests").insert(input).select("*").single()) as CustomTest;
+}
+export async function deleteCustomTest(id: string, userId: string): Promise<void> {
+  await sb().from("custom_tests").delete().eq("id", id).eq("user_id", userId);
 }
 
 // ── webhook subscriptions (spec v2 §3) ──────────────────────────────────────────
