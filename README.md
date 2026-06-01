@@ -62,10 +62,16 @@ Empty directories contain `.gitkeep` placeholders and will be filled out in late
 
 ## Roadmap
 
-See [the implementation plan](~/.claude/plans/jazzy-splashing-squid.md) for the full milestone
-breakdown. In short: **M0** Foundation (this) → **M1** Core MVP (upload, analysis, personas, KPIs,
-text report) → **M2** Testing + visualization (synthetic testing, Recharts, Konva, PDF) →
-**M3** Collaboration + integrations → **M4** Scale + monetization (admin, quota, teams).
+Milestone breakdown:
+
+- **M0 Foundation** — tooling, types, DB schema, env template ✅
+- **M1 Core MVP** — project flow, upload, analysis pipeline, personas, synthetic testing, KPI matrix, report ✅
+- **M2 Testing + visualization** — Recharts KPI charts, Konva annotated screens, Puppeteer PDF export ✅
+- **M3 Collaboration + integrations** — shareable no-login report links ✅; Mural/Figma/Jira/Confluence action buttons scaffolded (need provider credentials to go live)
+- **M4 Scale** — quota enforcement ✅, admin panel (users/quota, AI-service CRUD, usage log) ✅; team accounts / billing / marketplace not yet built
+
+Everything currently runs **mock-first** — add the env vars in `.env.example` to switch each
+service to live.
 
 ## Notes
 
