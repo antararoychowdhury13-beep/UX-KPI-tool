@@ -3,6 +3,7 @@
 // panel, in priority order: Claude → Qwen → Ollama. Returns null if none is available so callers
 // fall back to deterministic mock output.
 import { isServiceEnabled, getAIServiceBySlug } from "@/lib/db";
+import { cached } from "@/lib/ai/cache";
 
 function modelFor(slug: string, fallback: string): string {
   return getAIServiceBySlug(slug)?.model || fallback;
@@ -58,26 +59,31 @@ async function viaOllama(prompt: string): Promise<string> {
 
 export interface ResolvedProvider {
   slug: "claude" | "qwen" | "ollama";
+  model: string;
   run: (prompt: string) => Promise<string>;
 }
 
 /** The active text provider, or null when none is configured+enabled. */
 export function resolveTextProvider(): ResolvedProvider | null {
   if (process.env.ANTHROPIC_API_KEY && isServiceEnabled("claude")) {
-    return { slug: "claude", run: viaClaude };
+    return { slug: "claude", model: modelFor("claude", "claude-sonnet-4-20250514"), run: viaClaude };
   }
   if (process.env.QWEN_API_KEY && isServiceEnabled("qwen")) {
-    return { slug: "qwen", run: viaQwen };
+    return { slug: "qwen", model: modelFor("qwen", "qwen2.5-72b-instruct"), run: viaQwen };
   }
   if (process.env.OLLAMA_BASE_URL && isServiceEnabled("ollama")) {
-    return { slug: "ollama", run: viaOllama };
+    return { slug: "ollama", model: modelFor("ollama", "llama3.2"), run: viaOllama };
   }
   return null;
 }
 
-/** Generate text with the active provider, or null if none available. */
+/**
+ * Generate text with the active provider, or null if none available.
+ * Responses are cached by input hash (24h) so identical prompts skip the API call (spec v2 §10).
+ */
 export async function generateText(prompt: string): Promise<string | null> {
   const provider = resolveTextProvider();
   if (!provider) return null;
-  return provider.run(prompt);
+  const { value } = await cached(provider.slug, `${provider.model}\n${prompt}`, () => provider.run(prompt));
+  return value || null;
 }
