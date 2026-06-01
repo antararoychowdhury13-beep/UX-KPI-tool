@@ -12,6 +12,7 @@ import { resolveTextProvider } from "@/lib/ai/providers";
 import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
+import type { TestingMethod } from "@/types/persona";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -20,9 +21,13 @@ export async function POST(req: Request) {
   const userId = await getCurrentUserIdOrNull();
   if (!userId) return unauthorized();
 
-  const body = await readJson<{ projectId?: string }>(req);
+  const body = await readJson<{ projectId?: string; method?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
   const { projectId } = body;
+  const ALLOWED: TestingMethod[] = ["heuristic", "task_scenario", "think_aloud", "cognitive_load"];
+  const method: TestingMethod = ALLOWED.includes(body.method as TestingMethod)
+    ? (body.method as TestingMethod)
+    : "heuristic";
   const project = projectId ? await getOwnedProject(projectId, userId) : null;
   if (!project) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
@@ -54,6 +59,7 @@ export async function POST(req: Request) {
         flowType,
         flowDescription: project.description ?? "",
         keyChanges,
+        method,
       });
       results.push(
         await addTestResult({

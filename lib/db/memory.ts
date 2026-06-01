@@ -603,9 +603,11 @@ export function addTestResult(
 }
 
 export function listTestResults(projectId: string): SyntheticTestResult[] {
+  // Newest first: re-running (e.g. with a different testing method) appends new rows, and the
+  // testing page picks the first match per persona/flow — so it must reflect the latest run.
   return [...db.testResults.values()]
     .filter((r) => r.project_id === projectId)
-    .sort((a, b) => a.tested_at.localeCompare(b.tested_at));
+    .sort((a, b) => b.tested_at.localeCompare(a.tested_at));
 }
 
 // ── kpi matrices ────────────────────────────────────────────────────────────────

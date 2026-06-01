@@ -51,6 +51,94 @@ export interface FrictionPoint {
   reason: string;
 }
 
+/** The four synthetic testing methods (spec v2 §6, Prompts 3a–3d). */
+export type TestingMethod = "heuristic" | "task_scenario" | "think_aloud" | "cognitive_load";
+
+export const TESTING_METHODS: { value: TestingMethod; title: string; icon: string; desc: string }[] = [
+  { value: "heuristic", title: "Heuristic Walkthrough", icon: "ti-checklist", desc: "Score each flow against Nielsen's 10 usability heuristics." },
+  { value: "task_scenario", title: "Task Scenario Testing", icon: "ti-list-check", desc: "Simulate the persona attempting key tasks and measure success." },
+  { value: "think_aloud", title: "Think-Aloud Simulation", icon: "ti-message-dots", desc: "Generate a first-person narration of the persona's experience." },
+  { value: "cognitive_load", title: "Cognitive Load Mapping", icon: "ti-brain", desc: "Map mental effort screen-by-screen to find overload points." },
+];
+
+/** Nielsen's 10 heuristics, scored 0–10 (heuristic method). */
+export interface HeuristicScores {
+  visibility_of_system_status: number;
+  match_real_world: number;
+  user_control_freedom: number;
+  consistency_standards: number;
+  error_prevention: number;
+  recognition_over_recall: number;
+  flexibility_efficiency: number;
+  aesthetic_minimalist: number;
+  error_recovery: number;
+  help_documentation: number;
+}
+
+export const HEURISTIC_LABELS: Record<keyof HeuristicScores, string> = {
+  visibility_of_system_status: "Visibility of system status",
+  match_real_world: "Match with real world",
+  user_control_freedom: "User control & freedom",
+  consistency_standards: "Consistency & standards",
+  error_prevention: "Error prevention",
+  recognition_over_recall: "Recognition over recall",
+  flexibility_efficiency: "Flexibility & efficiency",
+  aesthetic_minimalist: "Aesthetic & minimalist design",
+  error_recovery: "Help users recover from errors",
+  help_documentation: "Help & documentation",
+};
+
+/** One simulated task (task-scenario method). */
+export interface TaskScenarioResult {
+  task_name: string;
+  task_description?: string;
+  success: boolean;
+  steps_taken: number;
+  expected_steps: number;
+  completion_time_estimate?: string;
+  deviation_reason?: string;
+  severity?: "low" | "medium" | "high" | "na";
+}
+
+/** Cognitive load at one screen (cognitive-load method). */
+export interface CognitiveLoadEntry {
+  screen_sequence: number;
+  screen_label?: string;
+  load_score: number;
+  peak_areas?: string[];
+  load_type?: string;
+  reason?: string;
+  reduction_opportunity?: string;
+}
+
+/**
+ * Raw payload returned by a testing-method prompt and stored verbatim in
+ * synthetic_test_results.raw_ai_response. Universal fields are always present;
+ * method-specific fields are populated only for their method.
+ */
+export interface SyntheticTestRaw {
+  testing_method?: TestingMethod;
+  task_success_rate: number;
+  estimated_time_to_task: string;
+  friction_points: FrictionPoint[];
+  error_likelihood: ErrorLikelihood;
+  confidence_level: number;
+  persona_reaction: string;
+  overall_score: number;
+  // heuristic
+  heuristic_scores?: HeuristicScores;
+  // task_scenario
+  task_scenarios_result?: TaskScenarioResult[];
+  // think_aloud
+  think_aloud_transcript?: string;
+  key_quotes?: string[];
+  emotional_arc?: string;
+  // cognitive_load
+  cognitive_load_map?: CognitiveLoadEntry[];
+  average_cognitive_load?: number;
+  peak_load_screen?: number;
+}
+
 export interface SyntheticTestResult {
   id: string;
   project_id: string;

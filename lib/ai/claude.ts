@@ -5,10 +5,13 @@
 import { generateText } from "@/lib/ai/providers";
 import { extractJson } from "@/lib/ai/json";
 import { personaGenerationPrompt } from "@/lib/prompts/personaGeneration";
-import { syntheticTestingPrompt } from "@/lib/prompts/syntheticTesting";
+import { heuristicWalkthroughPrompt } from "@/lib/prompts/heuristicWalkthrough";
+import { taskScenarioTestingPrompt } from "@/lib/prompts/taskScenarioTesting";
+import { thinkAloudSimulationPrompt } from "@/lib/prompts/thinkAloudSimulation";
+import { cognitiveLoadMappingPrompt } from "@/lib/prompts/cognitiveLoadMapping";
 import { flowContextAnalysisPrompt } from "@/lib/prompts/flowContextAnalysis";
 import { kpiInferencePrompt } from "@/lib/prompts/kpiInference";
-import type { GeneratedPersona } from "@/types/persona";
+import type { GeneratedPersona, SyntheticTestRaw, TestingMethod } from "@/types/persona";
 import type { FlowContext } from "@/types/flow";
 import type { KPIGenerationResult } from "@/types/kpi";
 
@@ -63,20 +66,15 @@ function normalizePersonaList(parsed: unknown): GeneratedPersona[] {
 }
 
 // ── Synthetic usability testing ──────────────────────────────────────────────────
-export interface SyntheticTestRaw {
-  task_success_rate: number;
-  estimated_time_to_task: string;
-  friction_points: {
-    screen_sequence: number;
-    description: string;
-    severity: "low" | "medium" | "high";
-    reason: string;
-  }[];
-  error_likelihood: "low" | "medium" | "high";
-  confidence_level: number;
-  persona_reaction: string;
-  overall_score: number;
-}
+const TESTING_PROMPTS: Record<
+  TestingMethod,
+  (p: { personaJson: string; flowType: "before" | "after"; flowDescription: string; keyChanges: string }) => string
+> = {
+  heuristic: heuristicWalkthroughPrompt,
+  task_scenario: taskScenarioTestingPrompt,
+  think_aloud: thinkAloudSimulationPrompt,
+  cognitive_load: cognitiveLoadMappingPrompt,
+};
 
 export async function runSyntheticTest(params: {
   personaJson: string;
@@ -84,9 +82,13 @@ export async function runSyntheticTest(params: {
   flowType: "before" | "after";
   flowDescription: string;
   keyChanges: string;
+  method?: TestingMethod;
 }): Promise<SyntheticTestRaw> {
-  const result = await generateJson<SyntheticTestRaw>(syntheticTestingPrompt(params));
-  return result && typeof result.task_success_rate === "number" ? result : mockTest(params.flowType);
+  const method: TestingMethod = params.method ?? "heuristic";
+  const result = await generateJson<SyntheticTestRaw>(TESTING_PROMPTS[method](params));
+  const raw = result && typeof result.task_success_rate === "number" ? result : mockTest(params.flowType, method);
+  // Stamp the method so the UI knows which method-specific view to render.
+  return { ...raw, testing_method: method };
 }
 
 // ── KPI matrix ───────────────────────────────────────────────────────────────────
@@ -213,9 +215,10 @@ function mockPersonas(count: number, traits: string): GeneratedPersona[] {
   );
 }
 
-function mockTest(flowType: "before" | "after"): SyntheticTestRaw {
+function mockTest(flowType: "before" | "after", method: TestingMethod = "heuristic"): SyntheticTestRaw {
   const after = flowType === "after";
-  return {
+  const base: SyntheticTestRaw = {
+    testing_method: method,
     task_success_rate: after ? 0.86 : 0.62,
     estimated_time_to_task: after ? "48s" : "1m 35s",
     friction_points: after
@@ -248,6 +251,45 @@ function mockTest(flowType: "before" | "after"): SyntheticTestRaw {
       : "I wasn't sure which fields were required and got stuck.",
     overall_score: after ? 8.4 : 5.6,
   };
+
+  if (method === "heuristic") {
+    const s = (hi: number, lo: number) => (after ? hi : lo);
+    base.heuristic_scores = {
+      visibility_of_system_status: s(8, 5),
+      match_real_world: s(8, 6),
+      user_control_freedom: s(7, 5),
+      consistency_standards: s(9, 6),
+      error_prevention: s(8, 4),
+      recognition_over_recall: s(8, 5),
+      flexibility_efficiency: s(7, 5),
+      aesthetic_minimalist: s(9, 6),
+      error_recovery: s(7, 4),
+      help_documentation: s(6, 5),
+    };
+  } else if (method === "task_scenario") {
+    base.task_scenarios_result = [
+      { task_name: "Locate the primary action", task_description: "Find and start the main task", success: true, steps_taken: after ? 2 : 4, expected_steps: 2, completion_time_estimate: after ? "12s" : "31s", deviation_reason: after ? "" : "Hunted through nested menus", severity: after ? "na" : "medium" },
+      { task_name: "Complete required fields", task_description: "Fill and validate the form", success: after, steps_taken: after ? 3 : 6, expected_steps: 3, completion_time_estimate: after ? "20s" : "55s", deviation_reason: after ? "" : "Unclear which fields were required", severity: after ? "na" : "high" },
+      { task_name: "Confirm and submit", task_description: "Review then submit", success: true, steps_taken: after ? 1 : 2, expected_steps: 1, completion_time_estimate: after ? "8s" : "16s", deviation_reason: after ? "" : "No summary before submit", severity: after ? "na" : "low" },
+    ];
+  } else if (method === "think_aloud") {
+    base.think_aloud_transcript = after
+      ? "Okay, the layout is clear right away. The main action is the first thing I see, so I'll click that… good, the form only asks for what it needs, and the required fields are obvious. Submitting now — and there's a clear confirmation. That was quick and I never felt lost."
+      : "Hmm, where do I start? There are a lot of options up top… let me try this menu. No, that's not it. Okay, found the form, but I'm not sure which of these fields I actually have to fill in. I'll just submit and see — oh, now it's showing errors I didn't expect. This is frustrating.";
+    base.key_quotes = after
+      ? ["The main action is the first thing I see", "I never felt lost"]
+      : ["Where do I start?", "I'm not sure which fields I have to fill in"];
+    base.emotional_arc = after ? "smooth_experience" : "frustrated_start_to_confident_end";
+  } else if (method === "cognitive_load") {
+    base.cognitive_load_map = [
+      { screen_sequence: 1, screen_label: "Entry", load_score: after ? 3 : 6, peak_areas: ["Top navigation"], load_type: "extraneous", reason: after ? "Clear entry point" : "Too many competing options", reduction_opportunity: "Surface the primary path" },
+      { screen_sequence: 2, screen_label: "Form", load_score: after ? 4 : 8, peak_areas: ["Field validation", "Labels"], load_type: "intrinsic", reason: after ? "Inline guidance" : "Unlabelled required fields", reduction_opportunity: "Mark required fields and validate inline" },
+      { screen_sequence: 3, screen_label: "Confirm", load_score: after ? 2 : 5, peak_areas: ["Summary"], load_type: "germane", reason: after ? "Clear summary" : "No review step", reduction_opportunity: "Add a confirmation summary" },
+    ];
+    base.average_cognitive_load = after ? 3 : 6.3;
+    base.peak_load_screen = 2;
+  }
+  return base;
 }
 
 function mockKpis(personaNames: string[]): KPIGenerationResult {

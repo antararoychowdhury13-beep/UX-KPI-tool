@@ -295,8 +295,10 @@ export async function addTestResult(
 }
 
 export async function listTestResults(projectId: string): Promise<SyntheticTestResult[]> {
+  // Newest first: re-running (e.g. with a different testing method) appends new rows, and the
+  // testing page picks the first match per persona/flow — so it must reflect the latest run.
   return must(
-    await sb().from("synthetic_test_results").select("*").eq("project_id", projectId).order("tested_at"),
+    await sb().from("synthetic_test_results").select("*").eq("project_id", projectId).order("tested_at", { ascending: false }),
   ) as SyntheticTestResult[];
 }
 
