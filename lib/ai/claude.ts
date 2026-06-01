@@ -6,8 +6,10 @@ import { generateText } from "@/lib/ai/providers";
 import { extractJson } from "@/lib/ai/json";
 import { personaGenerationPrompt } from "@/lib/prompts/personaGeneration";
 import { syntheticTestingPrompt } from "@/lib/prompts/syntheticTesting";
+import { flowContextAnalysisPrompt } from "@/lib/prompts/flowContextAnalysis";
 import { kpiInferencePrompt } from "@/lib/prompts/kpiInference";
 import type { GeneratedPersona } from "@/types/persona";
+import type { FlowContext } from "@/types/flow";
 import type { KPIGenerationResult } from "@/types/kpi";
 
 /** Run the active provider and parse JSON; return null to signal "use the mock". */
@@ -19,6 +21,18 @@ async function generateJson<T>(prompt: string): Promise<T | null> {
   } catch {
     return null; // provider returned unparseable output — degrade to mock
   }
+}
+
+// ── Flow context analysis ─────────────────────────────────────────────────────────
+export async function analyzeFlowContext(params: {
+  flowDescription: string;
+  flowType: string;
+  industry: string;
+}): Promise<FlowContext> {
+  const parsed = await generateJson<FlowContext>(flowContextAnalysisPrompt(params));
+  return parsed && typeof parsed.flow_summary === "string" && parsed.flow_summary.length
+    ? parsed
+    : mockFlowContext(params);
 }
 
 // ── Persona generation ──────────────────────────────────────────────────────────
@@ -90,6 +104,31 @@ export async function generateKpiMatrix(params: {
 }
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
+function mockFlowContext(params: { flowDescription: string; flowType: string; industry: string }): FlowContext {
+  const flow = params.flowType || "this flow";
+  return {
+    flow_summary: `A ${flow} experience in ${params.industry || "enterprise software"}. ${
+      params.flowDescription
+        ? "Personas are tuned to the described workflow and its primary pain points."
+        : "Add a flow description for sharper, more relevant personas."
+    }`,
+    user_environment: "Primarily desktop, in-office or hybrid, often under time pressure with competing tasks.",
+    primary_user_archetype: "Experienced operator with deep muscle memory for the legacy workflow.",
+    recommended_role_levels: ["mid", "senior", "manager"],
+    recommended_tech_comfort: ["intermediate", "advanced", "expert"],
+    recommended_age_ranges: ["36-45", "46-55"],
+    recommended_behavioral_traits: ["Detail-oriented", "Power user", "Risk-averse", "Enterprise admin"],
+    accessibility_considerations:
+      "Include at least one persona with elevated cognitive load or visual-contrast needs.",
+    key_tensions: [
+      "Users have deep muscle memory with the old system",
+      "A redesign creates change anxiety and relearning cost",
+    ],
+    persona_diversity_note:
+      "Vary tenure, tech comfort, and risk tolerance so the test surfaces both power-user and novice friction.",
+  };
+}
+
 function mockPersonas(count: number, traits: string): GeneratedPersona[] {
   const base: GeneratedPersona[] = [
     {
