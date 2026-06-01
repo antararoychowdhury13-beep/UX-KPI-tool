@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getLatestAnalysis, listPersonas, listTestResults } from "@/lib/db";
+import { getLatestAnalysis, listPersonas, listTestResults, listScreenshots } from "@/lib/db";
 import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { StepRow } from "@/components/layout/StepRow";
 import { TestingControls } from "@/components/testing/TestingControls";
@@ -25,10 +25,11 @@ export default async function TestingPage({ params }: { params: { id: string } }
   const project = await getOwnedProject(params.id, userId);
   if (!project) notFound();
 
-  const [analysis, allPersonas, results] = await Promise.all([
+  const [analysis, allPersonas, results, screenshots] = await Promise.all([
     getLatestAnalysis(project.id),
     listPersonas(userId, project.id),
     listTestResults(project.id),
+    listScreenshots(project.id),
   ]);
   const personas = allPersonas.filter((p) => p.project_id === project.id);
 
@@ -54,7 +55,8 @@ export default async function TestingPage({ params }: { params: { id: string } }
   // Which method produced the existing results (drives the selector default + header label).
   const currentMethod: TestingMethod =
     (results[0]?.raw_ai_response as SyntheticTestRaw | undefined)?.testing_method ?? "heuristic";
-  const methodLabel = TESTING_METHODS.find((m) => m.value === currentMethod)?.title ?? "Heuristic Walkthrough";
+  const methodMeta = TESTING_METHODS.find((m) => m.value === currentMethod);
+  const methodLabel = methodMeta?.title ?? "Heuristic Walkthrough";
 
   return (
     <>
@@ -88,6 +90,22 @@ export default async function TestingPage({ params }: { params: { id: string } }
         <div className="card">Generate personas before running tests.</div>
       ) : (
         <>
+          {results.length > 0 && (
+            <div className="test-method-bar">
+              <div className="tmb-left">
+                <i className={`ti ${methodMeta?.icon ?? "ti-checklist"}`} />
+                <div>
+                  <div className="tmb-method">{methodLabel}</div>
+                  <div className="tmb-sub">{methodMeta?.desc ?? "before vs after, per persona"}</div>
+                </div>
+              </div>
+              <div className="tmb-right">
+                <span className="tmb-badge">{personas.length} personas</span>
+                <span className="tmb-badge">{screenshots.length} screens</span>
+              </div>
+            </div>
+          )}
+
           <TestingControls
             projectId={project.id}
             hasResults={results.length > 0}

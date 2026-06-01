@@ -1,29 +1,11 @@
 import Link from "next/link";
 import {
   listProjects,
-  listScreenshots,
   listPersonas,
-  getReportByProject,
+  getKpiMatrixByProject,
 } from "@/lib/db";
 import { getCurrentUser, getCurrentUserId } from "@/lib/auth";
-import { Badge, statusTone } from "@/components/ui/Badge";
-
-const FLOW_ICON: Record<string, { icon: string; bg: string; color: string }> = {
-  dashboard: { icon: "ti-layout-dashboard", bg: "var(--blue-light)", color: "var(--blue-text)" },
-  settings: { icon: "ti-settings", bg: "var(--purple-light)", color: "var(--purple-text)" },
-  form: { icon: "ti-forms", bg: "var(--teal-light)", color: "var(--teal-text)" },
-  onboarding: { icon: "ti-rocket", bg: "var(--amber-light)", color: "var(--amber-text)" },
-  navigation: { icon: "ti-compass", bg: "var(--blue-light)", color: "var(--blue-text)" },
-  custom: { icon: "ti-square-rounded", bg: "var(--surface2)", color: "var(--text3)" },
-};
-
-function badgeLabel(status: string) {
-  if (status === "completed") return (<><i className="ti ti-check" style={{ fontSize: 10 }} /> Completed</>);
-  if (status === "processing" || status === "queued")
-    return (<><i className="ti ti-loader" style={{ fontSize: 10 }} /> Processing</>);
-  if (status === "failed") return "Failed";
-  return "Draft";
-}
+import { KPIPreviewCard } from "@/components/dashboard/KPIPreviewCard";
 
 export default async function DashboardPage() {
   const userId = await getCurrentUserId();
@@ -33,11 +15,11 @@ export default async function DashboardPage() {
   const personaCount = (await listPersonas(userId)).filter((p) => !p.is_template).length;
   const quotaRemaining = user.quota_analyses - user.quota_used;
 
-  // Per-project counts (resolved up front so the JSX stays synchronous).
+  // Per-project KPI snapshot + persona count (resolved up front so the JSX stays synchronous).
   const cards = await Promise.all(
     projects.map(async (p) => ({
       project: p,
-      screens: (await listScreenshots(p.id)).length,
+      matrix: (await getKpiMatrixByProject(p.id)) ?? undefined,
       personas: (await listPersonas(userId, p.id)).filter((x) => x.project_id === p.id).length,
     })),
   );
@@ -67,28 +49,9 @@ export default async function DashboardPage() {
       </div>
 
       <div className="proj-grid">
-        {cards.map(({ project: p, screens, personas }) => {
-          const meta = FLOW_ICON[String(p.flow_type)] ?? FLOW_ICON.custom;
-          return (
-            <Link key={p.id} href={`/projects/${p.id}`} className="proj-card">
-              <div className="proj-card-top">
-                <div className="proj-icon" style={{ background: meta.bg }}>
-                  <i className={`ti ${meta.icon}`} style={{ color: meta.color }} />
-                </div>
-                <div>
-                  <div className="proj-title">{p.name}</div>
-                  <div className="proj-meta">{p.description || "No description"}</div>
-                </div>
-              </div>
-              <div className="proj-footer">
-                <Badge tone={statusTone(p.status)}>{badgeLabel(p.status)}</Badge>
-                <span className="proj-info">
-                  <i className="ti ti-photo" /> {screens} screens · {personas} personas
-                </span>
-              </div>
-            </Link>
-          );
-        })}
+        {cards.map(({ project: p, matrix, personas }) => (
+          <KPIPreviewCard key={p.id} project={p} matrix={matrix} personas={personas} />
+        ))}
 
         <Link href="/projects/new" className="new-card">
           <i className="ti ti-plus" />
