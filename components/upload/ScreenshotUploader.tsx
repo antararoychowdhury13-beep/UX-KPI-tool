@@ -46,10 +46,24 @@ export function ScreenshotUploader({
     [projectId, type, router],
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
+    noClick: false,
     accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp", ".gif"] },
   });
+
+  async function removeItem(id: string) {
+    // Optimistic remove; revert on failure.
+    const prev = items;
+    setItems((xs) => xs.filter((s) => s.id !== id));
+    const res = await fetch(`/api/upload/${id}?projectId=${encodeURIComponent(projectId)}`, { method: "DELETE" });
+    if (!res.ok) {
+      setItems(prev);
+      setError("Could not remove that screenshot");
+    } else {
+      router.refresh();
+    }
+  }
 
   const isAfter = type === "after";
 
@@ -74,7 +88,8 @@ export function ScreenshotUploader({
         <div className="uz-hint">PNG, JPG · Sequential naming (01-name.png)</div>
 
         {items.length > 0 && (
-          <div className="thumb-row">
+          // stopPropagation so clicking a thumbnail's × doesn't re-open the file dialog (dropzone root)
+          <div className="thumb-row" onClick={(e) => e.stopPropagation()}>
             {items.map((s) => (
               <div
                 key={s.id}
@@ -87,9 +102,25 @@ export function ScreenshotUploader({
                 }
               >
                 <span className="tn">{String(s.sequence_order).padStart(2, "0")}</span>
+                <button
+                  type="button"
+                  className="thumb-del"
+                  aria-label={`Remove ${s.file_name}`}
+                  title="Remove"
+                  onClick={(e) => { e.stopPropagation(); removeItem(s.id); }}
+                >
+                  <i className="ti ti-x" />
+                </button>
               </div>
             ))}
-            <div className="thumb" style={{ borderStyle: "dashed", background: "transparent" }}>
+            <div
+              className="thumb thumb-add"
+              role="button"
+              tabIndex={0}
+              title="Add more"
+              onClick={(e) => { e.stopPropagation(); open(); }}
+              style={{ borderStyle: "dashed", background: "transparent" }}
+            >
               <i className="ti ti-plus" style={{ fontSize: 14 }} />
             </div>
           </div>

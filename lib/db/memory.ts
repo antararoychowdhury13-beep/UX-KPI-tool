@@ -669,6 +669,13 @@ export function listScreenshots(projectId: string): Screenshot[] {
     );
 }
 
+export function deleteScreenshot(id: string, projectId: string): string | null {
+  const s = db.screenshots.get(id);
+  if (!s || s.project_id !== projectId) return null;
+  db.screenshots.delete(id);
+  return s.file_path ?? null;
+}
+
 // ── analyses + jobs ─────────────────────────────────────────────────────────────
 export function createJob(projectId: string): AnalysisJob {
   const job: AnalysisJob = {

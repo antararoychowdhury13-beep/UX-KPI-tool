@@ -72,6 +72,7 @@ export const updateProject = pick(sb.updateProject, mem.updateProject);
 
 export const addScreenshots = pick(sb.addScreenshots, mem.addScreenshots);
 export const listScreenshots = pick(sb.listScreenshots, mem.listScreenshots);
+export const deleteScreenshot = pick(sb.deleteScreenshot, mem.deleteScreenshot);
 
 export const createAnalysis = pick(sb.createAnalysis, mem.createAnalysis);
 export const getAnalysis = pick(sb.getAnalysis, mem.getAnalysis);

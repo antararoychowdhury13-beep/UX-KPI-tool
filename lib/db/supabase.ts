@@ -399,6 +399,13 @@ export async function listScreenshots(projectId: string): Promise<Screenshot[]> 
   ) as Screenshot[];
 }
 
+/** Delete a screenshot (scoped to its project). Returns its storage path for cleanup, or null. */
+export async function deleteScreenshot(id: string, projectId: string): Promise<string | null> {
+  const { data } = await sb().from("screenshots").select("file_path").eq("id", id).eq("project_id", projectId).maybeSingle();
+  await sb().from("screenshots").delete().eq("id", id).eq("project_id", projectId);
+  return (data as { file_path?: string } | null)?.file_path ?? null;
+}
+
 // ── analyses ──────────────────────────────────────────────────────────────────
 export async function createAnalysis(input: {
   project_id: string;

@@ -1,7 +1,8 @@
 // GET  /api/persona/[id] — persona detail.
-// PATCH /api/persona/[id] — { action: "saveToLibrary" } detaches the persona into the user library.
+// PATCH /api/persona/[id] — { action: "saveToLibrary" } copies the persona into the user's library
+//   (project_id = null) while leaving the project's copy intact.
 import { NextResponse } from "next/server";
-import { getPersona, saveToLibrary } from "@/lib/db";
+import { getPersona, addPersonas } from "@/lib/db";
 import { getCurrentUserIdOrNull } from "@/lib/auth";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
 
@@ -11,8 +12,11 @@ export async function GET(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
+  const userId = await getCurrentUserIdOrNull();
+  if (!userId) return unauthorized();
   const persona = await getPersona(params.id);
-  if (!persona) {
+  // Only the owner (or a global template) can view the detail.
+  if (!persona || (persona.user_id !== userId && !persona.is_template)) {
     return NextResponse.json({ error: "Unknown persona" }, { status: 404 });
   }
   return NextResponse.json({ persona });
@@ -22,16 +26,20 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
 ) {
-  if (!(await getCurrentUserIdOrNull())) return unauthorized();
+  const userId = await getCurrentUserIdOrNull();
+  if (!userId) return unauthorized();
   const body = await readJson<{ action?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
-  const { action } = body;
-  if (action === "saveToLibrary") {
-    const persona = await saveToLibrary(params.id);
-    if (!persona) {
+
+  if (body.action === "saveToLibrary") {
+    const original = await getPersona(params.id);
+    if (!original || (original.user_id !== userId && !original.is_template)) {
       return NextResponse.json({ error: "Unknown persona" }, { status: 404 });
     }
-    return NextResponse.json({ persona });
+    // Copy into the library (project_id null) so the project keeps its persona too.
+    const { id: _id, created_at: _c, ...rest } = original;
+    const [copy] = await addPersonas([{ ...rest, user_id: userId, project_id: null, is_template: false }]);
+    return NextResponse.json({ persona: copy }, { status: 201 });
   }
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }

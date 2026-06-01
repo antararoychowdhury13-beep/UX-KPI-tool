@@ -1,6 +1,7 @@
 import { listPersonas } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 import { PersonaCard } from "@/components/persona/PersonaCard";
+import { NewPersonaButton } from "@/components/persona/NewPersonaButton";
 
 export default async function PersonaLibraryPage() {
   const personas = (await listPersonas(await getCurrentUserId())).filter((p) => p.project_id === null);
@@ -10,8 +11,9 @@ export default async function PersonaLibraryPage() {
       <div className="section-head">
         <div>
           <div className="section-title">Persona library</div>
-          <div className="section-sub">Saved personas and admin templates, reusable across projects</div>
+          <div className="section-sub">{personas.length} saved · reusable across projects · click any to view detail</div>
         </div>
+        <NewPersonaButton />
       </div>
 
       {personas.length === 0 ? (

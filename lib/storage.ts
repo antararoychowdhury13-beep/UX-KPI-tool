@@ -37,6 +37,16 @@ export async function uploadScreenshot(
   return path;
 }
 
+/** Remove a screenshot object from storage (best-effort; no-op in mock mode). */
+export async function removeScreenshot(path: string): Promise<void> {
+  if (!hasSupabase || !path || path.startsWith("mock://")) return;
+  try {
+    await sb().storage.from(SCREENSHOTS).remove([path]);
+  } catch {
+    /* best-effort */
+  }
+}
+
 /** Signed, time-limited URL for displaying a private screenshot; null in mock mode / on error. */
 export async function signedScreenshotUrl(path: string, expiresIn = 3600): Promise<string | null> {
   if (!hasSupabase || !path || path.startsWith("mock://")) return null;
