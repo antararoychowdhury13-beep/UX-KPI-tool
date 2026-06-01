@@ -1,15 +1,19 @@
 import { getCurrentUser } from "@/lib/auth";
+import { listAIServices } from "@/lib/db";
 import { initials } from "@/lib/utils/initials";
-import { hasSupabase, hasAnthropic, hasGemini, hasHuggingFace, hasRedis } from "@/lib/config";
+import { hasSupabase, hasRedis } from "@/lib/config";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
+  // Derive AI services from the managed list (same source as the admin panel) so they stay in sync.
+  const aiServices: Array<[string, boolean]> = listAIServices().map((s) => [
+    s.name,
+    !!(s.env_var && process.env[s.env_var]),
+  ]);
   const services: Array<[string, boolean]> = [
     ["Supabase (data/auth/storage)", hasSupabase],
-    ["Anthropic Claude", hasAnthropic],
-    ["Google Gemini", hasGemini],
-    ["HuggingFace", hasHuggingFace],
+    ...aiServices,
     ["Upstash Redis (queue)", hasRedis],
   ];
 
