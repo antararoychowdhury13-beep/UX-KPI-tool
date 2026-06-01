@@ -42,17 +42,15 @@ export default async function KpiPage({ params }: { params: { id: string } }) {
 
       {!matrix ? (
         <div className="card">
-          {!analysis ? (
-            <div className="hint" style={{ marginBottom: 14 }}>
-              <i className="ti ti-alert-triangle" />
-              <div>Run the screenshot analysis (Upload step) before generating KPIs.</div>
-            </div>
-          ) : (
-            <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 14 }}>
-              Ready to generate. This uses the latest analysis, personas, and any synthetic test
-              results.
-            </p>
-          )}
+          <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 14 }}>
+            Ready to generate from your personas{analysis ? ", the screenshot analysis," : ""} and synthetic
+            test results.
+            {!analysis && (
+              <span style={{ display: "block", marginTop: 6, fontSize: 12, color: "var(--text3)" }}>
+                Optional: upload before/after screens and run the analysis for richer, screen-level KPIs.
+              </span>
+            )}
+          </p>
           <GenerateKpiButton projectId={project.id} />
         </div>
       ) : (

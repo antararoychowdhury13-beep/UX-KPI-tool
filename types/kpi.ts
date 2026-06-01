@@ -29,7 +29,7 @@ export interface KPI {
 
 export interface KPIMatrix {
   id: string;
-  analysis_id: string;
+  analysis_id: string | null;
   project_id: string;
   kpis: KPI[];
   overall_confidence: number;

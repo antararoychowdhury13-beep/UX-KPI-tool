@@ -523,7 +523,7 @@ export async function listTestResults(projectId: string): Promise<SyntheticTestR
 
 // ── kpi matrices ────────────────────────────────────────────────────────────────
 export async function createKpiMatrix(input: {
-  analysis_id: string;
+  analysis_id: string | null;
   project_id: string;
   kpis: KPI[];
   overall_confidence: number;

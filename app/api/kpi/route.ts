@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import {
   getLatestAnalysis,
+  createAnalysis,
   listPersonas,
   listTestResults,
   createKpiMatrix,
@@ -37,21 +38,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }
 
-  const analysis = await getLatestAnalysis(project.id);
-  if (!analysis) {
-    return NextResponse.json(
-      { error: "Run analysis before generating KPIs" },
-      { status: 400 },
-    );
-  }
-
+  let analysis = await getLatestAnalysis(project.id);
   const personas = (await listPersonas(userId, project.id)).filter(
     (p) => p.project_id === project.id,
   );
   const testResults = await listTestResults(project.id);
 
+  // The screenshot analysis is optional — KPIs can be synthesised from personas + synthetic test
+  // results alone (a v3 run may have no uploaded screenshots). Require at least one signal.
+  if (!analysis && testResults.length === 0 && personas.length === 0) {
+    return NextResponse.json(
+      { error: "Generate personas (and ideally run synthetic tests) before generating KPIs." },
+      { status: 400 },
+    );
+  }
+
+  // kpi_matrices.analysis_id is NOT NULL, so synthesise a minimal analysis row when none exists
+  // (e.g. tests run without uploaded screenshots) to anchor the matrix.
+  if (!analysis) {
+    analysis = await createAnalysis({ project_id: project.id, status: "completed" });
+  }
+
   const result = await generateKpiMatrix({
-    analysisJson: JSON.stringify(analysis.flow_diff ?? {}),
+    analysisJson: JSON.stringify(analysis?.flow_diff ?? {}),
     testResultsJson: JSON.stringify(testResults),
     personasJson: JSON.stringify(personas),
     industryContext: industryContext ?? "Enterprise Software",
