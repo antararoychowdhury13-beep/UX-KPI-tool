@@ -3,6 +3,7 @@
 // NOTE: bundled Chromium works locally; on Vercel use @sparticuz/chromium + puppeteer-core.
 import { NextResponse } from "next/server";
 import { getReportByShareToken } from "@/lib/db";
+import { uploadReportPdf } from "@/lib/storage";
 import { appUrl } from "@/lib/config";
 
 export const runtime = "nodejs";
@@ -11,7 +12,8 @@ export const maxDuration = 60;
 
 export async function GET(req: Request) {
   const token = new URL(req.url).searchParams.get("token");
-  if (!token || !(await getReportByShareToken(token))) {
+  const report = token ? await getReportByShareToken(token) : undefined;
+  if (!report) {
     return NextResponse.json({ error: "Unknown report" }, { status: 404 });
   }
 
@@ -28,6 +30,8 @@ export async function GET(req: Request) {
       printBackground: true,
       margin: { top: "16px", bottom: "16px", left: "16px", right: "16px" },
     });
+    // Best-effort archive to the reports bucket (don't fail the download if it errors).
+    await uploadReportPdf(report.id, new Uint8Array(pdf)).catch(() => null);
     return new NextResponse(Buffer.from(pdf), {
       headers: {
         "Content-Type": "application/pdf",

@@ -8,7 +8,8 @@ import {
   updateProjectStatus,
 } from "@/lib/db";
 import { analyzeScreens, type InlineImage } from "@/lib/ai/gemini";
-import type { FlowDiff } from "@/types/project";
+import { downloadScreenshotBase64 } from "@/lib/storage";
+import type { FlowDiff, Screenshot } from "@/types/project";
 
 export async function processAnalysis(
   projectId: string,
@@ -29,10 +30,12 @@ export async function processAnalysis(
     const before = screenshots.filter((s) => s.type === "before");
     const after = screenshots.filter((s) => s.type === "after");
 
-    // In mock mode there are no real image bytes; the Gemini wrapper ignores empty arrays.
-    // When real storage is wired, download bytes here and pass as InlineImage[].
-    const beforeImages: InlineImage[] = [];
-    const afterImages: InlineImage[] = [];
+    // Download real bytes from Storage (when configured); falls back to count-only placeholders so
+    // the Gemini wrapper uses its mock in mock mode / when bytes are unavailable.
+    const [beforeImages, afterImages] = await Promise.all([
+      loadImages(before),
+      loadImages(after),
+    ]);
 
     const raw = await analyzeScreens({
       flowDescription: project.description ?? "",
@@ -68,6 +71,12 @@ export async function processAnalysis(
     });
     await updateProjectStatus(projectId, "failed");
   }
+}
+
+// Download real screenshot bytes from Storage for the vision model (skips any that aren't available).
+async function loadImages(shots: Screenshot[]): Promise<InlineImage[]> {
+  const loaded = await Promise.all(shots.map((s) => downloadScreenshotBase64(s.file_path)));
+  return loaded.filter((x): x is { data: string; mimeType: string } => !!x);
 }
 
 // Placeholder so the mock analyzer still receives a count when no real bytes exist.

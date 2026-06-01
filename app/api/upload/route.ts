@@ -4,6 +4,7 @@
 // wired, upload bytes to the `project-screenshots` bucket and store the returned path.
 import { NextResponse } from "next/server";
 import { getProject, addScreenshots } from "@/lib/db";
+import { uploadScreenshot } from "@/lib/storage";
 import { parseSequence, parseScreenLabel, isAcceptedImage } from "@/lib/utils/fileNaming";
 import type { ScreenshotType } from "@/types/project";
 
@@ -34,17 +35,21 @@ export async function POST(req: Request) {
     );
   }
 
-  const rows = files.map((f, i) => {
-    const seq = parseSequence(f.name);
-    return {
-      project_id: projectId,
-      type,
-      sequence_order: seq ?? i + 1,
-      file_name: f.name,
-      file_path: `mock://project-screenshots/${projectId}/${f.name}`,
-      screen_label: parseScreenLabel(f.name) || null,
-    };
-  });
+  const rows = await Promise.all(
+    files.map(async (f, i) => {
+      const seq = parseSequence(f.name) ?? i + 1;
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      const file_path = await uploadScreenshot(projectId, type, seq, f.name, bytes, f.type);
+      return {
+        project_id: projectId,
+        type,
+        sequence_order: seq,
+        file_name: f.name,
+        file_path,
+        screen_label: parseScreenLabel(f.name) || null,
+      };
+    }),
+  );
 
   const screenshots = await addScreenshots(rows);
   return NextResponse.json({ screenshots }, { status: 201 });
