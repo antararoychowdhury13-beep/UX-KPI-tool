@@ -4,23 +4,29 @@
 //   DELETE remove a service
 import { NextResponse } from "next/server";
 import { createAIService, updateAIService, deleteAIService, listAIServices } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
-import { readJson, badRequest } from "@/lib/http";
+import { getCurrentUserOrNull } from "@/lib/auth";
+import { readJson, badRequest, unauthorized, forbidden } from "@/lib/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function forbidden() {
-  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+/** Returns a 401/403 response if the caller isn't an admin, else null. */
+async function adminGuard(): Promise<NextResponse | null> {
+  const me = await getCurrentUserOrNull();
+  if (!me) return unauthorized();
+  if (me.role !== "admin") return forbidden();
+  return null;
 }
 
 export async function GET() {
-  if ((await getCurrentUser()).role !== "admin") return forbidden();
+  const g = await adminGuard();
+  if (g) return g;
   return NextResponse.json({ services: listAIServices() });
 }
 
 export async function POST(req: Request) {
-  if ((await getCurrentUser()).role !== "admin") return forbidden();
+  const g = await adminGuard();
+  if (g) return g;
   const body = await readJson<{
     name?: string;
     slug?: string;
@@ -36,7 +42,8 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  if ((await getCurrentUser()).role !== "admin") return forbidden();
+  const g = await adminGuard();
+  if (g) return g;
   const body = await readJson<{
     id?: string;
     name?: string;
@@ -54,7 +61,8 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  if ((await getCurrentUser()).role !== "admin") return forbidden();
+  const g = await adminGuard();
+  if (g) return g;
   const body = await readJson<{ id?: string }>(req);
   if (!body?.id) return badRequest("id is required");
   const ok = deleteAIService(body.id);

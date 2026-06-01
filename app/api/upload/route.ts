@@ -5,12 +5,15 @@
 import { NextResponse } from "next/server";
 import { getProject, addScreenshots } from "@/lib/db";
 import { uploadScreenshot } from "@/lib/storage";
+import { getCurrentUserIdOrNull } from "@/lib/auth";
+import { unauthorized } from "@/lib/http";
 import { parseSequence, parseScreenLabel, isAcceptedImage } from "@/lib/utils/fileNaming";
 import type { ScreenshotType } from "@/types/project";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  if (!(await getCurrentUserIdOrNull())) return unauthorized();
   const form = await req.formData();
   const projectId = String(form.get("projectId") ?? "");
   const type = String(form.get("type") ?? "") as ScreenshotType;

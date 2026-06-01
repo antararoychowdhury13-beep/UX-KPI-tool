@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import { getProject, addPersonas, logApiUsage } from "@/lib/db";
 import { generatePersonas } from "@/lib/ai/claude";
 import { resolveTextProvider } from "@/lib/ai/providers";
-import { getCurrentUserId } from "@/lib/auth";
+import { getCurrentUserIdOrNull } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
-import { readJson, badRequest } from "@/lib/http";
+import { readJson, badRequest, unauthorized } from "@/lib/http";
 import type { Persona, TechComfort } from "@/types/persona";
 
 export const runtime = "nodejs";
@@ -26,7 +26,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
 
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserIdOrNull();
+  if (!userId) return unauthorized();
   if (!(await checkRateLimit(userId))) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }

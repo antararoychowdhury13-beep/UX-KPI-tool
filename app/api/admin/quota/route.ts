@@ -1,15 +1,15 @@
 // PATCH /api/admin/quota — update a user's analysis quota (admin only).
 import { NextResponse } from "next/server";
 import { setQuota } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
-import { readJson, badRequest } from "@/lib/http";
+import { getCurrentUserOrNull } from "@/lib/auth";
+import { readJson, badRequest, unauthorized, forbidden } from "@/lib/http";
 
 export const runtime = "nodejs";
 
 export async function PATCH(req: Request) {
-  if ((await getCurrentUser()).role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const me = await getCurrentUserOrNull();
+  if (!me) return unauthorized();
+  if (me.role !== "admin") return forbidden();
   const body = await readJson<{ userId?: string; quota_analyses?: number }>(req);
   if (!body?.userId || typeof body.quota_analyses !== "number") {
     return badRequest("userId and quota_analyses are required");

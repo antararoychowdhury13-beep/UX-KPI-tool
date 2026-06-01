@@ -2,7 +2,8 @@
 // PATCH /api/persona/[id] — { action: "saveToLibrary" } detaches the persona into the user library.
 import { NextResponse } from "next/server";
 import { getPersona, saveToLibrary } from "@/lib/db";
-import { readJson, badRequest } from "@/lib/http";
+import { getCurrentUserIdOrNull } from "@/lib/auth";
+import { readJson, badRequest, unauthorized } from "@/lib/http";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
 ) {
+  if (!(await getCurrentUserIdOrNull())) return unauthorized();
   const body = await readJson<{ action?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
   const { action } = body;

@@ -11,3 +11,9 @@ export async function readJson<T>(req: Request): Promise<T | null> {
 
 export const badRequest = (message: string) =>
   NextResponse.json({ error: message }, { status: 400 });
+
+export const unauthorized = () =>
+  NextResponse.json({ error: "Not signed in" }, { status: 401 });
+
+export const forbidden = () =>
+  NextResponse.json({ error: "Forbidden" }, { status: 403 });

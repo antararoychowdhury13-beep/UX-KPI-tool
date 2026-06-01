@@ -32,6 +32,19 @@ export async function getCurrentUserId(): Promise<string> {
   return (await getCurrentUser()).id;
 }
 
+/** Non-throwing variants for API routes that should return 401 (not 500) when unauthenticated. */
+export async function getCurrentUserOrNull(): Promise<User | null> {
+  try {
+    return await getCurrentUser();
+  } catch {
+    return null;
+  }
+}
+
+export async function getCurrentUserIdOrNull(): Promise<string | null> {
+  return (await getCurrentUserOrNull())?.id ?? null;
+}
+
 /** True when a session exists (used to decide redirects). */
 export async function isAuthenticated(): Promise<boolean> {
   if (!hasSupabase) return true;
