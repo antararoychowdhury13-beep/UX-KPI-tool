@@ -66,7 +66,7 @@ function seed(): Store {
     { name: "Google Gemini", slug: "gemini", role: "Screenshot vision analysis", provider: "google", model: "gemini-1.5-flash", env_var: "GOOGLE_GEMINI_API_KEY", enabled: true, builtin: true },
     { name: "HuggingFace", slug: "huggingface", role: "Image similarity (fallback)", provider: "huggingface", model: null, env_var: "HUGGINGFACE_API_KEY", enabled: true, builtin: true },
     { name: "Qwen", slug: "qwen", role: "Alternate persona / KPI generation", provider: "alibaba", model: "qwen2.5-72b-instruct", env_var: "QWEN_API_KEY", enabled: true, builtin: true },
-    { name: "Ollama (local)", slug: "ollama", role: "Local LLM inference", provider: "ollama", model: "llama3.1", env_var: "OLLAMA_BASE_URL", enabled: true, builtin: true },
+    { name: "Ollama (local)", slug: "ollama", role: "Local LLM inference", provider: "ollama", model: "llama3.2", env_var: "OLLAMA_BASE_URL", enabled: true, builtin: true },
   ];
   for (const s of builtinServices) {
     const id = uuid();
@@ -353,6 +353,10 @@ export function listAIServices(): AIService[] {
 
 export function getAIService(id: string): AIService | undefined {
   return db.aiServices.get(id);
+}
+
+export function getAIServiceBySlug(slug: string): AIService | undefined {
+  return [...db.aiServices.values()].find((s) => s.slug === slug);
 }
 
 function slugify(input: string): string {

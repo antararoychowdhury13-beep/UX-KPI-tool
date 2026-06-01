@@ -1,7 +1,8 @@
-// Claude wrapper — persona generation, synthetic testing, and KPI inference (spec §2, §5).
-// Real Anthropic SDK call when ANTHROPIC_API_KEY is set; deterministic mock otherwise.
-import { hasAnthropic } from "@/lib/config";
-import { isServiceEnabled } from "@/lib/db";
+// Text-LLM tasks — persona generation, synthetic testing, KPI inference (spec §2, §5).
+// Runs against the active provider (Claude / Qwen / Ollama via lib/ai/providers); falls back to
+// deterministic mock output when no provider is configured OR when the provider returns
+// unparseable JSON (small local models can be flaky, so we degrade gracefully).
+import { generateText } from "@/lib/ai/providers";
 import { extractJson } from "@/lib/ai/json";
 import { personaGenerationPrompt } from "@/lib/prompts/personaGeneration";
 import { syntheticTestingPrompt } from "@/lib/prompts/syntheticTesting";
@@ -9,18 +10,15 @@ import { kpiInferencePrompt } from "@/lib/prompts/kpiInference";
 import type { GeneratedPersona } from "@/types/persona";
 import type { KPIGenerationResult } from "@/types/kpi";
 
-const MODEL = "claude-sonnet-4-20250514";
-
-async function complete(prompt: string): Promise<string> {
-  const Anthropic = (await import("@anthropic-ai/sdk")).default;
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const msg = await client.messages.create({
-    model: MODEL,
-    max_tokens: 4096,
-    messages: [{ role: "user", content: prompt }],
-  });
-  const block = msg.content.find((b) => b.type === "text");
-  return block && block.type === "text" ? block.text : "";
+/** Run the active provider and parse JSON; return null to signal "use the mock". */
+async function generateJson<T>(prompt: string): Promise<T | null> {
+  const text = await generateText(prompt);
+  if (text == null) return null; // no provider configured/enabled
+  try {
+    return extractJson<T>(text);
+  } catch {
+    return null; // provider returned unparseable output — degrade to mock
+  }
 }
 
 // ── Persona generation ──────────────────────────────────────────────────────────
@@ -32,9 +30,22 @@ export async function generatePersonas(params: {
   traits: string;
   techComfort: string;
 }): Promise<GeneratedPersona[]> {
-  if (!hasAnthropic || !isServiceEnabled("claude")) return mockPersonas(params.count, params.traits);
-  const text = await complete(personaGenerationPrompt(params));
-  return extractJson<GeneratedPersona[]>(text);
+  const parsed = await generateJson<unknown>(personaGenerationPrompt(params));
+  // Accept an array, a common wrapper ({personas|data|items|results: [...]}), or a single object.
+  const arr = normalizePersonaList(parsed);
+  return arr.length ? arr : mockPersonas(params.count, params.traits);
+}
+
+function normalizePersonaList(parsed: unknown): GeneratedPersona[] {
+  if (Array.isArray(parsed)) return parsed as GeneratedPersona[];
+  if (parsed && typeof parsed === "object") {
+    const obj = parsed as Record<string, unknown>;
+    for (const key of ["personas", "data", "items", "results"]) {
+      if (Array.isArray(obj[key])) return obj[key] as GeneratedPersona[];
+    }
+    if (typeof obj.name === "string") return [parsed as GeneratedPersona];
+  }
+  return [];
 }
 
 // ── Synthetic usability testing ──────────────────────────────────────────────────
@@ -60,9 +71,8 @@ export async function runSyntheticTest(params: {
   flowDescription: string;
   keyChanges: string;
 }): Promise<SyntheticTestRaw> {
-  if (!hasAnthropic || !isServiceEnabled("claude")) return mockTest(params.flowType);
-  const text = await complete(syntheticTestingPrompt(params));
-  return extractJson<SyntheticTestRaw>(text);
+  const result = await generateJson<SyntheticTestRaw>(syntheticTestingPrompt(params));
+  return result && typeof result.task_success_rate === "number" ? result : mockTest(params.flowType);
 }
 
 // ── KPI matrix ───────────────────────────────────────────────────────────────────
@@ -73,9 +83,10 @@ export async function generateKpiMatrix(params: {
   industryContext: string;
   personaNames: string[];
 }): Promise<KPIGenerationResult> {
-  if (!hasAnthropic || !isServiceEnabled("claude")) return mockKpis(params.personaNames);
-  const text = await complete(kpiInferencePrompt(params));
-  return extractJson<KPIGenerationResult>(text);
+  const result = await generateJson<KPIGenerationResult>(kpiInferencePrompt(params));
+  return result && Array.isArray(result.kpis) && result.kpis.length >= 1
+    ? result
+    : mockKpis(params.personaNames);
 }
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────

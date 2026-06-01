@@ -9,6 +9,7 @@ import {
   logApiUsage,
 } from "@/lib/db";
 import { runSyntheticTest } from "@/lib/ai/claude";
+import { resolveTextProvider } from "@/lib/ai/providers";
 import { getCurrentUserId } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { readJson, badRequest } from "@/lib/http";
@@ -68,6 +69,6 @@ export async function POST(req: Request) {
     }
   }
 
-  logApiUsage({ user_id: userId, service: "claude", endpoint: "/api/test", status: "success" });
+  logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/test", status: "success" });
   return NextResponse.json({ results }, { status: 201 });
 }

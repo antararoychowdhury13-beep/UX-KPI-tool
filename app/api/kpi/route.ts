@@ -9,6 +9,7 @@ import {
   logApiUsage,
 } from "@/lib/db";
 import { generateKpiMatrix } from "@/lib/ai/claude";
+import { resolveTextProvider } from "@/lib/ai/providers";
 import { getCurrentUserId } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { uuid } from "@/lib/utils/ids";
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
     kpis,
     overall_confidence: result.overall_confidence,
   });
-  logApiUsage({ user_id: userId, service: "claude", endpoint: "/api/kpi", status: "success" });
+  logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/kpi", status: "success" });
 
   return NextResponse.json(
     {

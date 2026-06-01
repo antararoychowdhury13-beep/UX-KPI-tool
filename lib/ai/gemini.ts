@@ -30,35 +30,46 @@ export async function analyzeScreens(params: {
   beforeImages: InlineImage[];
   afterImages: InlineImage[];
 }): Promise<ScreenAnalysisRaw> {
-  if (!hasGemini || !isServiceEnabled("gemini")) {
+  const allImages = [...params.beforeImages, ...params.afterImages];
+  const hasRealBytes = allImages.some((img) => img.data && img.data.length > 0);
+
+  // Use the mock unless Gemini is enabled/keyed AND we actually have image bytes to analyze.
+  // (Real screenshot bytes require Supabase Storage; until that's wired, analysis stays mock even
+  // when a key is present.)
+  if (!hasGemini || !isServiceEnabled("gemini") || !hasRealBytes) {
     return mockAnalysis(params.beforeImages.length, params.afterImages.length);
   }
 
-  const { GoogleGenerativeAI } = await import("@google/generative-ai");
-  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
-  const model = genAI.getGenerativeModel({ model: MODEL });
+  try {
+    const { GoogleGenerativeAI } = await import("@google/generative-ai");
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
+    const model = genAI.getGenerativeModel({ model: MODEL });
 
-  const prompt = screenAnalysisPrompt({
-    flowDescription: params.flowDescription,
-    flowType: params.flowType,
-    beforeCount: params.beforeImages.length,
-    afterCount: params.afterImages.length,
-  });
+    const prompt = screenAnalysisPrompt({
+      flowDescription: params.flowDescription,
+      flowType: params.flowType,
+      beforeCount: params.beforeImages.length,
+      afterCount: params.afterImages.length,
+    });
 
-  const parts = [
-    { text: prompt },
-    { text: "BEFORE screenshots:" },
-    ...params.beforeImages.map((img) => ({
-      inlineData: { mimeType: img.mimeType, data: img.data },
-    })),
-    { text: "AFTER screenshots:" },
-    ...params.afterImages.map((img) => ({
-      inlineData: { mimeType: img.mimeType, data: img.data },
-    })),
-  ];
+    const parts = [
+      { text: prompt },
+      { text: "BEFORE screenshots:" },
+      ...params.beforeImages.map((img) => ({
+        inlineData: { mimeType: img.mimeType, data: img.data },
+      })),
+      { text: "AFTER screenshots:" },
+      ...params.afterImages.map((img) => ({
+        inlineData: { mimeType: img.mimeType, data: img.data },
+      })),
+    ];
 
-  const result = await model.generateContent(parts);
-  return extractJson<ScreenAnalysisRaw>(result.response.text());
+    const result = await model.generateContent(parts);
+    return extractJson<ScreenAnalysisRaw>(result.response.text());
+  } catch {
+    // Network/quota/parse failure — degrade gracefully rather than fail the analysis job.
+    return mockAnalysis(params.beforeImages.length, params.afterImages.length);
+  }
 }
 
 function mockAnalysis(beforeCount: number, afterCount: number): ScreenAnalysisRaw {

@@ -27,7 +27,7 @@ export interface Report {
   created_at: string;
 }
 
-export type ApiService = "claude" | "gemini" | "huggingface";
+export type ApiService = "claude" | "gemini" | "huggingface" | "qwen" | "ollama";
 export type ApiCallStatus = "success" | "failed" | "rate_limited";
 
 /** An admin-managed AI service configuration (add/edit/remove in the admin panel). */

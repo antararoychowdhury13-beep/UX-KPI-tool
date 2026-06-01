@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { getProject, addPersonas, logApiUsage } from "@/lib/db";
 import { generatePersonas } from "@/lib/ai/claude";
+import { resolveTextProvider } from "@/lib/ai/providers";
 import { getCurrentUserId } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { readJson, badRequest } from "@/lib/http";
@@ -58,6 +59,6 @@ export async function POST(req: Request) {
   }));
 
   const personas = addPersonas(rows);
-  logApiUsage({ user_id: userId, service: "claude", endpoint: "/api/persona/generate", status: "success" });
+  logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/persona/generate", status: "success" });
   return NextResponse.json({ personas }, { status: 201 });
 }

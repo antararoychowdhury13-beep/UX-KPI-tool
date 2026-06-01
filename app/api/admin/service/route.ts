@@ -13,6 +13,11 @@ function forbidden() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 
+export async function GET() {
+  if (getCurrentUser().role !== "admin") return forbidden();
+  return NextResponse.json({ services: listAIServices() });
+}
+
 export async function POST(req: Request) {
   if (getCurrentUser().role !== "admin") return forbidden();
   const body = await readJson<{
