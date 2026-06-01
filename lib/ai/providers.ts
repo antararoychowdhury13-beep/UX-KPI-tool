@@ -77,6 +77,15 @@ export function resolveTextProvider(): ResolvedProvider | null {
   return null;
 }
 
+const PROVIDER_LABELS: Record<string, string> = { claude: "Claude", qwen: "Qwen", ollama: "Ollama (local)" };
+
+/** The active text model for display in the UI (null → mock mode). */
+export function activeModelInfo(): { slug: string; model: string; label: string } | null {
+  const p = resolveTextProvider();
+  if (!p) return null;
+  return { slug: p.slug, model: p.model, label: PROVIDER_LABELS[p.slug] ?? p.slug };
+}
+
 /**
  * Generate text with the active provider, or null if none available.
  * Responses are cached by input hash (24h) so identical prompts skip the API call (spec v2 §10).

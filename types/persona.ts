@@ -68,15 +68,54 @@ export interface FrictionPoint {
   reason: string;
 }
 
-/** The four synthetic testing methods (spec v2 §6, Prompts 3a–3d). */
-export type TestingMethod = "heuristic" | "task_scenario" | "think_aloud" | "cognitive_load";
+/**
+ * Synthetic testing methods. The first four have bespoke structured outputs (Prompts 3a–3d,
+ * spec v2 §6); the rest run through a generic evaluation prompt driven by their `focus`.
+ */
+export type TestingMethod = string;
 
-export const TESTING_METHODS: { value: TestingMethod; title: string; icon: string; desc: string }[] = [
-  { value: "heuristic", title: "Heuristic Walkthrough", icon: "ti-checklist", desc: "Score each flow against Nielsen's 10 usability heuristics." },
-  { value: "task_scenario", title: "Task Scenario Testing", icon: "ti-list-check", desc: "Simulate the persona attempting key tasks and measure success." },
-  { value: "think_aloud", title: "Think-Aloud Simulation", icon: "ti-message-dots", desc: "Generate a first-person narration of the persona's experience." },
-  { value: "cognitive_load", title: "Cognitive Load Mapping", icon: "ti-brain", desc: "Map mental effort screen-by-screen to find overload points." },
+export interface TestingMethodDef {
+  value: string;
+  title: string;
+  icon: string;
+  desc: string;
+  /** what the AI should evaluate (used by the generic-method prompt) */
+  focus: string;
+}
+
+/** The four methods with dedicated prompts + result views. */
+export const SPECIAL_METHODS = ["heuristic", "task_scenario", "think_aloud", "cognitive_load"];
+
+export const TESTING_METHODS: TestingMethodDef[] = [
+  { value: "heuristic", title: "Heuristic Walkthrough", icon: "ti-checklist", desc: "Score each flow against Nielsen's 10 usability heuristics.", focus: "Nielsen's 10 usability heuristics" },
+  { value: "task_scenario", title: "Task Scenario Testing", icon: "ti-list-check", desc: "Simulate the persona attempting key tasks and measure success.", focus: "task completion across 5 key scenarios" },
+  { value: "think_aloud", title: "Think-Aloud Simulation", icon: "ti-message-dots", desc: "Generate a first-person narration of the persona's experience.", focus: "first-person think-aloud narration" },
+  { value: "cognitive_load", title: "Cognitive Load Mapping", icon: "ti-brain", desc: "Map mental effort screen-by-screen to find overload points.", focus: "cognitive load per screen" },
+  { value: "first_click", title: "First-Click Test", icon: "ti-click", desc: "Predict the first click per task and whether it leads to success.", focus: "where the persona clicks first for each key task and whether that path is correct" },
+  { value: "five_second", title: "5-Second Test", icon: "ti-clock-bolt", desc: "Capture first impression and recall after a 5-second glance.", focus: "the persona's first impression, recall, and perceived purpose after a 5-second glance" },
+  { value: "accessibility_audit", title: "Accessibility Audit", icon: "ti-accessible", desc: "Evaluate against WCAG 2.1 AA across each screen.", focus: "WCAG 2.1 AA: colour contrast, focus order, labels, keyboard operability, and target sizes" },
+  { value: "findability", title: "Findability / Info Scent", icon: "ti-search", desc: "Assess whether labels and cues lead to the right place.", focus: "information scent — whether labels and cues guide the persona to the correct destination" },
+  { value: "error_recovery", title: "Error Recovery", icon: "ti-alert-triangle", desc: "How well the flow prevents, surfaces, and recovers from errors.", focus: "error prevention, how clearly errors are surfaced, and how easily the persona recovers" },
+  { value: "emotional_response", title: "Emotional Response", icon: "ti-mood-smile", desc: "Gauge desirability and emotional reaction across the journey.", focus: "emotional reaction and desirability at each stage of the journey" },
+  { value: "trust_credibility", title: "Trust & Credibility", icon: "ti-shield-check", desc: "Evaluate trust signals, transparency, and credibility cues.", focus: "trust signals, transparency, and credibility cues" },
+  { value: "learnability", title: "Learnability", icon: "ti-school", desc: "Predict first-use learning curve and time-to-proficiency.", focus: "first-use learning curve and time to proficiency" },
+  { value: "expert_efficiency", title: "Expert Efficiency", icon: "ti-bolt", desc: "Assess shortcuts, batch actions, and speed for power users.", focus: "efficiency for expert/power users: shortcuts, batch actions, and steps saved" },
+  { value: "visual_hierarchy", title: "Visual Hierarchy", icon: "ti-layout-2", desc: "Evaluate scanning order, emphasis, and where attention lands.", focus: "visual hierarchy — scanning order, emphasis, and where attention lands first" },
+  { value: "content_clarity", title: "Content & Microcopy", icon: "ti-typography", desc: "Assess clarity, tone, and helpfulness of labels and copy.", focus: "clarity, tone, and helpfulness of labels, microcopy, and instructions" },
+  { value: "mobile_ergonomics", title: "Mobile Ergonomics", icon: "ti-device-mobile", desc: "Evaluate reachability, tap targets, and one-handed use.", focus: "mobile ergonomics — thumb reachability, tap-target size, and one-handed operability" },
+  { value: "form_usability", title: "Form Usability", icon: "ti-forms", desc: "Assess field design, validation, and completion effort.", focus: "form usability — field design, inline validation, and effort to complete" },
+  { value: "navigation", title: "Navigation & Wayfinding", icon: "ti-compass", desc: "Evaluate orientation, structure, and ease of moving around.", focus: "navigation and wayfinding — orientation, structure, and ease of moving through the flow" },
+  { value: "decision_friction", title: "Decision Friction", icon: "ti-arrows-split-2", desc: "Apply Hick's Law: assess choice overload and decision points.", focus: "decision friction via Hick's Law — choice overload at key decision points" },
+  { value: "conversion_funnel", title: "Conversion Funnel", icon: "ti-filter", desc: "Predict drop-off at each step of the conversion funnel.", focus: "conversion funnel drop-off — likelihood of abandoning at each step" },
 ];
+
+/** One finding from a generic-method evaluation. */
+export interface MethodFinding {
+  title: string;
+  severity: "low" | "medium" | "high" | "positive";
+  description: string;
+  recommendation?: string;
+}
 
 /** Nielsen's 10 heuristics, scored 0–10 (heuristic method). */
 export interface HeuristicScores {
@@ -154,6 +193,8 @@ export interface SyntheticTestRaw {
   cognitive_load_map?: CognitiveLoadEntry[];
   average_cognitive_load?: number;
   peak_load_screen?: number;
+  // generic methods (first-click, accessibility, trust, etc.)
+  findings?: MethodFinding[];
 }
 
 export interface SyntheticTestResult {

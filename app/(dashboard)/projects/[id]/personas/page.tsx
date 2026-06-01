@@ -5,6 +5,7 @@ import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { StepRow } from "@/components/layout/StepRow";
 import { PersonaCard } from "@/components/persona/PersonaCard";
 import { PersonaGenerator } from "@/components/persona/PersonaGenerator";
+import { activeModelInfo } from "@/lib/ai/providers";
 
 export default async function PersonasPage({ params }: { params: { id: string } }) {
   const userId = await getCurrentUserId();
@@ -29,7 +30,7 @@ export default async function PersonasPage({ params }: { params: { id: string } 
         )}
       </div>
 
-      <PersonaGenerator projectId={project.id} hasPersonas={personas.length > 0} />
+      <PersonaGenerator projectId={project.id} hasPersonas={personas.length > 0} model={activeModelInfo()} />
 
       {personas.length > 0 && (
         <>

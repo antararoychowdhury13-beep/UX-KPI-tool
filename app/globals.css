@@ -349,13 +349,42 @@ body {
   .method-panel-head { margin-bottom: 12px; }
   .method-panel-title { font-size: 13px; font-weight: 600; color: var(--text); }
   .method-panel-sub { font-size: 11px; color: var(--text3); }
-  .method-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
-  .method-card { text-align: left; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; cursor: pointer; transition: all .15s; font-family: inherit; }
+  .method-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; max-height: 360px; overflow-y: auto; padding: 1px; }
+  .method-card { text-align: left; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 11px; cursor: pointer; transition: all .15s; font-family: inherit; }
   .method-card:hover { border-color: var(--blue); }
   .method-card.selected { border-color: var(--blue); background: var(--blue-light); }
-  .method-card i { font-size: 18px; color: var(--blue-text); margin-bottom: 6px; display: block; }
+  .method-card i { font-size: 17px; color: var(--blue-text); margin-bottom: 5px; display: block; }
   .method-card-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
   .method-card-desc { font-size: 10px; color: var(--text3); line-height: 1.4; }
+
+  /* Active-model badge */
+  .model-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; padding: 3px 9px; border-radius: 20px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); white-space: nowrap; }
+  .model-badge i { font-size: 12px; color: var(--blue-text); }
+  .model-badge .mb-label { font-weight: 600; color: var(--text); }
+  .model-badge .mb-model { font-family: "DM Mono", monospace; color: var(--text3); font-size: 9px; }
+
+  /* "How is this calculated?" methodology explainer */
+  .how-link { background: none; border: none; cursor: pointer; font-size: 10px; color: var(--blue-text); display: inline-flex; align-items: center; gap: 4px; font-family: inherit; padding: 0; }
+  .how-link:hover { text-decoration: underline; }
+  .methodology { background: var(--blue-light); border: 1px solid #bfdbfe; border-radius: var(--r); padding: 12px 14px; margin-bottom: 12px; }
+  .methodology-title { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--blue-text); margin-bottom: 8px; }
+  .methodology-steps { margin: 0 0 8px; padding-left: 18px; }
+  .methodology-steps li { font-size: 11px; color: var(--text2); line-height: 1.6; margin-bottom: 3px; }
+  .methodology-note { font-size: 11px; color: var(--text2); display: flex; gap: 6px; align-items: flex-start; padding-top: 8px; border-top: 1px solid #bfdbfe; }
+  .methodology-note i { color: var(--amber-text); flex-shrink: 0; margin-top: 1px; }
+
+  /* Generic-method findings */
+  .findings-list { display: flex; flex-direction: column; gap: 8px; }
+  .finding { display: flex; gap: 8px; align-items: flex-start; }
+  .finding-sev { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; padding: 2px 7px; border-radius: 10px; flex-shrink: 0; font-weight: 600; }
+  .sev-high { background: var(--red-light); color: var(--red-text); }
+  .sev-medium { background: var(--amber-light); color: var(--amber-text); }
+  .sev-low { background: var(--surface2); color: var(--text3); }
+  .sev-positive { background: var(--green-light); color: var(--green-text); }
+  .finding-title { font-size: 12px; font-weight: 500; color: var(--text); }
+  .finding-desc { font-size: 11px; color: var(--text2); line-height: 1.5; }
+  .finding-rec { font-size: 11px; color: var(--blue-text); display: flex; gap: 5px; align-items: flex-start; margin-top: 2px; }
+  .finding-rec i { flex-shrink: 0; margin-top: 2px; }
 
   /* Expandable per-persona test rows */
   .test-row-wrap { margin-bottom: 8px; }

@@ -13,7 +13,7 @@ import { resolveTextProvider } from "@/lib/ai/providers";
 import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
-import type { TestingMethod } from "@/types/persona";
+import { TESTING_METHODS, type TestingMethod } from "@/types/persona";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -25,10 +25,8 @@ export async function POST(req: Request) {
   const body = await readJson<{ projectId?: string; method?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
   const { projectId } = body;
-  const ALLOWED: TestingMethod[] = ["heuristic", "task_scenario", "think_aloud", "cognitive_load"];
-  const method: TestingMethod = ALLOWED.includes(body.method as TestingMethod)
-    ? (body.method as TestingMethod)
-    : "heuristic";
+  const allowed = TESTING_METHODS.map((m) => m.value);
+  const method: TestingMethod = body.method && allowed.includes(body.method) ? body.method : "heuristic";
   const project = projectId ? await getOwnedProject(projectId, userId) : null;
   if (!project) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FlowContext } from "@/types/flow";
 import { AiProgress, useStepProgress, type AiStep } from "@/components/ai/AiProgress";
+import { ModelBadge } from "@/components/ai/ModelBadge";
 
 const FLOW_STEPS: AiStep[] = [
   { chip: "reading context", label: "Reading flow description" },
@@ -75,7 +76,15 @@ const ROLE_MAP: Record<string, string> = {
   lead: "Lead", manager: "Manager", director: "Director",
 };
 
-export function PersonaGenerator({ projectId, hasPersonas }: { projectId: string; hasPersonas: boolean }) {
+export function PersonaGenerator({
+  projectId,
+  hasPersonas,
+  model,
+}: {
+  projectId: string;
+  hasPersonas: boolean;
+  model: { label: string; model: string } | null;
+}) {
   const router = useRouter();
   const [count, setCount] = useState(5);
   const [industry, setIndustry] = useState("Enterprise Software");
@@ -170,6 +179,7 @@ export function PersonaGenerator({ projectId, hasPersonas }: { projectId: string
           <div className="pe-title">AI Persona Engine</div>
           <div className="pe-sub">Reads your flow description and auto-configures relevant personas</div>
         </div>
+        <ModelBadge model={model} />
         <button className="tb-btn" onClick={analyseFlow} disabled={analyzing}>
           <i className={`ti ${analyzing ? "ti-loader-2" : "ti-scan"}`} />
           {analyzing ? "Analysing…" : "Analyse flow"}

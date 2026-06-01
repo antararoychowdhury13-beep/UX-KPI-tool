@@ -9,9 +9,10 @@ import { heuristicWalkthroughPrompt } from "@/lib/prompts/heuristicWalkthrough";
 import { taskScenarioTestingPrompt } from "@/lib/prompts/taskScenarioTesting";
 import { thinkAloudSimulationPrompt } from "@/lib/prompts/thinkAloudSimulation";
 import { cognitiveLoadMappingPrompt } from "@/lib/prompts/cognitiveLoadMapping";
+import { genericMethodPrompt } from "@/lib/prompts/genericMethod";
 import { flowContextAnalysisPrompt } from "@/lib/prompts/flowContextAnalysis";
 import { kpiInferencePrompt } from "@/lib/prompts/kpiInference";
-import type { GeneratedPersona, SyntheticTestRaw, TestingMethod } from "@/types/persona";
+import { TESTING_METHODS, type GeneratedPersona, type SyntheticTestRaw, type TestingMethod } from "@/types/persona";
 import type { FlowContext } from "@/types/flow";
 import type { KPIGenerationResult } from "@/types/kpi";
 
@@ -71,10 +72,8 @@ function normalizePersonaList(parsed: unknown): GeneratedPersona[] {
 }
 
 // ── Synthetic usability testing ──────────────────────────────────────────────────
-const TESTING_PROMPTS: Record<
-  TestingMethod,
-  (p: { personaJson: string; flowType: "before" | "after"; flowDescription: string; keyChanges: string }) => string
-> = {
+type PromptParams = { personaJson: string; flowType: "before" | "after"; flowDescription: string; keyChanges: string };
+const SPECIAL_PROMPTS: Record<string, (p: PromptParams) => string> = {
   heuristic: heuristicWalkthroughPrompt,
   task_scenario: taskScenarioTestingPrompt,
   think_aloud: thinkAloudSimulationPrompt,
@@ -90,7 +89,13 @@ export async function runSyntheticTest(params: {
   method?: TestingMethod;
 }): Promise<SyntheticTestRaw> {
   const method: TestingMethod = params.method ?? "heuristic";
-  const result = await generateJson<SyntheticTestRaw>(TESTING_PROMPTS[method](params));
+  // Bespoke prompt for the original four methods; generic focus-driven prompt for the rest.
+  const builder = SPECIAL_PROMPTS[method];
+  const def = TESTING_METHODS.find((m) => m.value === method);
+  const prompt = builder
+    ? builder(params)
+    : genericMethodPrompt({ ...params, methodTitle: def?.title ?? method, focus: def?.focus ?? "overall usability" });
+  const result = await generateJson<SyntheticTestRaw>(prompt);
   const raw = result && typeof result.task_success_rate === "number" ? result : mockTest(params.flowType, method);
   // Stamp the method so the UI knows which method-specific view to render.
   return { ...raw, testing_method: method };
@@ -323,6 +328,17 @@ function mockTest(flowType: "before" | "after", method: TestingMethod = "heurist
     ];
     base.average_cognitive_load = after ? 3 : 6.3;
     base.peak_load_screen = 2;
+  } else {
+    // Generic methods (first-click, accessibility, trust, etc.)
+    base.findings = after
+      ? [
+          { title: "Clear primary path", severity: "positive", description: "The redesign makes the main action and next step obvious for this lens." },
+          { title: "Minor polish opportunity", severity: "low", description: "A secondary cue could be slightly stronger.", recommendation: "Increase contrast/spacing on the secondary affordance." },
+        ]
+      : [
+          { title: "Ambiguous entry point", severity: "high", description: "The persona is unsure where to start for this lens.", recommendation: "Surface the primary path and de-emphasise competing options." },
+          { title: "Weak feedback", severity: "medium", description: "State changes are not clearly communicated.", recommendation: "Add inline feedback at the point of action." },
+        ];
   }
   return base;
 }

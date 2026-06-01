@@ -3,21 +3,26 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TESTING_METHODS, type TestingMethod } from "@/types/persona";
+import { ModelBadge } from "@/components/ai/ModelBadge";
 
 export function TestingControls({
   projectId,
   hasResults,
   currentMethod,
+  model,
 }: {
   projectId: string;
   hasResults: boolean;
   currentMethod: TestingMethod;
+  model: { label: string; model: string } | null;
 }) {
   const router = useRouter();
   const [method, setMethod] = useState<TestingMethod>(currentMethod);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [howOpen, setHowOpen] = useState(false);
   const [progress, setProgress] = useState(0);
+  const selected = TESTING_METHODS.find((m) => m.value === method);
   const [label, setLabel] = useState<string | null>(null);
 
   async function run() {
@@ -73,10 +78,34 @@ export function TestingControls({
 
   return (
     <div className="method-panel">
-      <div className="method-panel-head">
-        <div className="method-panel-title">Testing method</div>
-        <div className="method-panel-sub">Pick how the personas evaluate the before / after flows, then run.</div>
+      <div className="method-panel-head" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+        <div>
+          <div className="method-panel-title">Testing method <span style={{ color: "var(--text3)", fontWeight: 400 }}>· {TESTING_METHODS.length} methods</span></div>
+          <div className="method-panel-sub">Pick how the personas evaluate the before / after flows, then run.</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+          <ModelBadge model={model} />
+          <button type="button" className="how-link" onClick={() => setHowOpen((o) => !o)}>
+            <i className="ti ti-help-circle" /> How is this calculated?
+          </button>
+        </div>
       </div>
+
+      {howOpen && (
+        <div className="methodology">
+          <div className="methodology-title"><i className="ti ti-flask" /> How synthetic testing works</div>
+          <ol className="methodology-steps">
+            <li>Each of your <b>synthetic personas</b> is run against the <b>before</b> and <b>after</b> flows.</li>
+            <li>{model ? <><b>{model.label}</b> ({model.model})</> : <b>The active AI model</b>} evaluates each flow through the chosen lens — <b>{selected?.title ?? "the selected method"}</b> — using the flow description, the AI screen analysis, and the persona&apos;s traits.</li>
+            <li>For each persona × flow it predicts a <b>task-success rate</b>, an <b>error likelihood</b>, <b>friction points</b> (with severity), and an overall <b>0–10 score</b>.</li>
+            <li>Scores are averaged across personas into the <b>aggregate stats</b> below, then rolled into the KPI matrix and the composite UX score.</li>
+          </ol>
+          <div className="methodology-note">
+            <i className="ti ti-info-circle" /> These are <b>AI-simulated predictions</b> to direct design decisions early — validate the top findings with a short real-user study before launch.
+          </div>
+        </div>
+      )}
+
       <div className="method-grid">
         {TESTING_METHODS.map((m) => (
           <button

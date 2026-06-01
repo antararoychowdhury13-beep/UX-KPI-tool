@@ -5,6 +5,7 @@ import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { StepRow } from "@/components/layout/StepRow";
 import { TestingControls } from "@/components/testing/TestingControls";
 import { TestResultRow } from "@/components/testing/TestResultRow";
+import { activeModelInfo } from "@/lib/ai/providers";
 import {
   TESTING_METHODS,
   type FrictionPoint,
@@ -110,6 +111,7 @@ export default async function TestingPage({ params }: { params: { id: string } }
             projectId={project.id}
             hasResults={results.length > 0}
             currentMethod={currentMethod}
+            model={activeModelInfo()}
           />
 
           {tested.length > 0 && (

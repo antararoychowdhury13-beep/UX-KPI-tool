@@ -6,6 +6,7 @@ import {
   HEURISTIC_LABELS,
   type FrictionPoint,
   type HeuristicScores,
+  type MethodFinding,
   type Persona,
   type SyntheticTestRaw,
   type SyntheticTestResult,
@@ -42,7 +43,8 @@ export function TestResultRow({
     (method === "heuristic" && !!afterRaw.heuristic_scores) ||
     (method === "task_scenario" && !!afterRaw.task_scenarios_result?.length) ||
     (method === "think_aloud" && !!afterRaw.think_aloud_transcript) ||
-    (method === "cognitive_load" && !!afterRaw.cognitive_load_map?.length)
+    (method === "cognitive_load" && !!afterRaw.cognitive_load_map?.length) ||
+    !!afterRaw.findings?.length
   );
 
   return (
@@ -114,6 +116,9 @@ export function TestResultRow({
           {method === "cognitive_load" && afterRaw.cognitive_load_map && (
             <CognitiveLoad before={beforeRaw} after={afterRaw} />
           )}
+          {!["heuristic", "task_scenario", "think_aloud", "cognitive_load"].includes(method) && afterRaw.findings && (
+            <GenericFindings findings={afterRaw.findings} />
+          )}
           {afterRaw.persona_reaction && (
             <div className="detail-reaction">
               <i className="ti ti-quote" /> {afterRaw.persona_reaction}
@@ -121,6 +126,30 @@ export function TestResultRow({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function GenericFindings({ findings }: { findings: MethodFinding[] }) {
+  return (
+    <div className="detail-block">
+      <div className="detail-title">Findings — after flow</div>
+      <div className="findings-list">
+        {findings.map((f, i) => (
+          <div key={i} className="finding">
+            <span className={`finding-sev sev-${f.severity}`}>{f.severity}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="finding-title">{f.title}</div>
+              <div className="finding-desc">{f.description}</div>
+              {f.recommendation && (
+                <div className="finding-rec">
+                  <i className="ti ti-arrow-right" /> {f.recommendation}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
