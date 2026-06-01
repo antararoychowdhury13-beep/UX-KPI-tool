@@ -15,9 +15,18 @@ export interface Persona {
   behavioral_traits: string[];
   goals: string | null;
   frustrations: string | null;
-  /** optional richer attributes (shown on persona cards; beyond the base spec schema) */
+  /** optional richer attributes (shown on persona cards; spec v2 §3) */
   experience_years?: number | null;
   device_preference?: string | null;
+  location?: string | null;
+  motivation_quote?: string | null;
+  role_level?: string | null;
+  occupation_detail?: string | null;
+  accessibility_profile?: string | null;
+  /** exact age (age_range holds the bucket like "36-45"). */
+  age?: number | null;
+  /** numeric tech-comfort 1-10 (tech_comfort holds the low|medium|high bucket). */
+  tech_comfort_score?: number | null;
   /** admin-created global templates available to all users. */
   is_template: boolean;
   is_synthetic: boolean;
@@ -25,19 +34,27 @@ export interface Persona {
   created_at: string;
 }
 
-/** Shape returned by the Claude persona-generation prompt (spec §5, Prompt 2). */
+/** Shape returned by the Claude persona-generation prompt (spec v2 §6, Prompt 2). */
 export interface GeneratedPersona {
   name: string;
   age: number;
+  age_range?: string;
   gender: string;
   occupation: string;
+  occupation_detail?: string;
+  role_level?: string;
+  location?: string;
   experience_years: number;
   tech_comfort: TechComfort;
+  tech_comfort_score?: number;
   behavioral_traits: string[];
   primary_goal: string;
   key_frustration: string;
+  motivation_quote?: string;
   mental_model: string;
-  accessibility_needs: string;
+  accessibility_profile?: string;
+  /** legacy field name still emitted by some prompt variants */
+  accessibility_needs?: string;
   device_preference: string;
 }
 

@@ -248,16 +248,38 @@ export async function getLatestAnalysis(projectId: string): Promise<Analysis | u
 }
 
 // ── personas ──────────────────────────────────────────────────────────────────
+// Columns added by later migrations (0002 + 0004). Persist them when present; if the target DB
+// hasn't run the migration, Postgres/PostgREST errors naming the missing column — we strip that
+// column and retry, so persona generation works on any schema version (base → 0002 → 0004).
+const OPTIONAL_PERSONA_COLUMNS = [
+  "experience_years",
+  "device_preference",
+  "age",
+  "tech_comfort_score",
+  "location",
+  "motivation_quote",
+  "role_level",
+  "occupation_detail",
+  "accessibility_profile",
+];
+
 export async function addPersonas(rows: Array<Omit<Persona, "id" | "created_at">>): Promise<Persona[]> {
-  // experience_years/device_preference are optional extras (migration 0002). Persist them when the
-  // columns exist; otherwise retry without them so it works on the base schema (migration 0001).
-  const first = await sb().from("personas").insert(rows).select("*");
-  if (!first.error) return first.data as Persona[];
-  if (/experience_years|device_preference/.test(first.error.message)) {
-    const base = rows.map(({ experience_years: _e, device_preference: _d, ...r }) => r);
-    return must(await sb().from("personas").insert(base).select("*")) as Persona[];
+  let payload: Array<Record<string, unknown>> = rows.map((r) => ({ ...r }));
+  for (let attempt = 0; attempt < OPTIONAL_PERSONA_COLUMNS.length + 1; attempt++) {
+    const res = await sb().from("personas").insert(payload).select("*");
+    if (!res.error) return res.data as Persona[];
+    // Extract the offending column name from messages like:
+    //  "Could not find the 'location' column of 'personas' in the schema cache"
+    //  "column \"location\" of relation \"personas\" does not exist"
+    const m = res.error.message.match(/'([a-z_]+)' column|column "([a-z_]+)"/);
+    const col = m?.[1] ?? m?.[2];
+    if (col && OPTIONAL_PERSONA_COLUMNS.includes(col)) {
+      payload = payload.map(({ [col]: _omit, ...rest }) => rest);
+      continue;
+    }
+    throw new Error(`Supabase: ${res.error.message}`);
   }
-  throw new Error(`Supabase: ${first.error.message}`);
+  throw new Error("Supabase: could not insert personas after stripping optional columns");
 }
 
 export async function getPersona(id: string): Promise<Persona | undefined> {

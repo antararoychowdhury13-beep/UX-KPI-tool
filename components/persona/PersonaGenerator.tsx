@@ -4,84 +4,83 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FlowContext } from "@/types/flow";
 
+const AGES = ["18–25", "26–35", "36–45", "46–55", "55+"];
+const GENDERS = ["Male", "Female", "Non-binary", "Mixed"];
+const ROLES = ["Junior", "Mid-level", "Senior", "Lead", "Manager", "Director"];
+const TECH = ["Beginner", "Intermediate", "Advanced", "Expert"];
+const ACCESS = ["None", "Visual impairment", "Motor difficulty", "Cognitive load"];
 const TRAITS = [
   "Risk-averse",
   "Detail-oriented",
   "Impatient",
   "Power user",
-  "Accessibility needs",
+  "Slow adopter",
   "Keyboard-first",
   "Enterprise admin",
+  "Multi-tasker",
+  "Procedure-follower",
+  "Shortcut seeker",
   "Mobile-first",
-  "Slow adopter",
 ];
+const INDUSTRIES = ["Enterprise Software", "Finance", "Healthcare", "E-commerce", "Telecom", "Manufacturing", "Other"];
 
-const INDUSTRIES = [
-  "Enterprise Software",
-  "Finance",
-  "Healthcare",
-  "E-commerce",
-  "Telecom",
-  "Manufacturing",
-  "Other",
-];
-
-// Map the AI's tech-comfort vocabulary (beginner/intermediate/advanced/expert) to this builder's
-// select values. Multiple distinct recommendations → "Mixed".
-function mapTechComfort(rec?: string[]): string | null {
-  if (!rec || rec.length === 0) return null;
-  const uniq = Array.from(new Set(rec.map((r) => r.toLowerCase())));
-  if (uniq.length > 1) return "low to high";
-  const one = uniq[0];
-  if (one.startsWith("begin")) return "low";
-  if (one.startsWith("inter")) return "medium";
-  if (one.startsWith("adv") || one.startsWith("exp")) return "high";
-  return null;
-}
-
-const AGE_OPTIONS = ["26–35", "36–45", "46–55"];
-// AI returns "36-45" (hyphen); the select uses an en-dash. Normalise before matching.
-function mapAgeRange(rec?: string[]): string | null {
-  if (!rec || rec.length === 0) return null;
-  for (const r of rec) {
-    const norm = r.replace(/[-–—]/g, "–").trim();
-    if (AGE_OPTIONS.includes(norm)) return norm;
-  }
-  return null;
-}
-
-export function PersonaGenerator({
-  projectId,
-  hasPersonas,
+function ChipGroup({
+  icon,
+  label,
+  options,
+  selected,
+  onToggle,
 }: {
-  projectId: string;
-  hasPersonas: boolean;
+  icon: string;
+  label: string;
+  options: string[];
+  selected: string[];
+  onToggle: (v: string) => void;
 }) {
+  return (
+    <div className="cfg-item">
+      <div className="cfg-lbl">
+        <i className={`ti ${icon}`} /> {label}
+      </div>
+      <div className="tag-selector">
+        {options.map((o) => (
+          <span key={o} className={`tag-sel ${selected.includes(o) ? "selected" : ""}`} onClick={() => onToggle(o)}>
+            {o}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Normalise a hyphenated AI age range ("36-45") to the en-dash chips ("36–45").
+const normAge = (s: string) => s.replace(/[-–—]/g, "–").trim();
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const ROLE_MAP: Record<string, string> = {
+  junior: "Junior", mid: "Mid-level", "mid-level": "Mid-level", senior: "Senior",
+  lead: "Lead", manager: "Manager", director: "Director",
+};
+
+export function PersonaGenerator({ projectId, hasPersonas }: { projectId: string; hasPersonas: boolean }) {
   const router = useRouter();
   const [count, setCount] = useState(5);
-  const [selected, setSelected] = useState<string[]>([
-    "Risk-averse",
-    "Detail-oriented",
-    "Power user",
-    "Enterprise admin",
-  ]);
-  const [ageRange, setAgeRange] = useState("36–45");
-  const [techComfort, setTechComfort] = useState("low to high");
   const [industry, setIndustry] = useState("Enterprise Software");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Flow-context analysis (spec v2 §6, Prompt 0)
-  const [analyzing, setAnalyzing] = useState(false);
-  const [flow, setFlow] = useState<FlowContext | null>(null);
-  // Extra trait chips surfaced by the flow analysis that aren't in the default list.
+  const [ages, setAges] = useState<string[]>(["36–45", "46–55"]);
+  const [genders, setGenders] = useState<string[]>(["Male", "Female", "Mixed"]);
+  const [roles, setRoles] = useState<string[]>(["Mid-level", "Senior"]);
+  const [tech, setTech] = useState<string[]>(["Intermediate", "Advanced", "Expert"]);
+  const [access, setAccess] = useState<string[]>(["None"]);
+  const [traits, setTraits] = useState<string[]>(["Risk-averse", "Detail-oriented", "Power user", "Enterprise admin"]);
   const [extraTraits, setExtraTraits] = useState<string[]>([]);
 
-  const allTraits = Array.from(new Set([...TRAITS, ...extraTraits]));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [flow, setFlow] = useState<FlowContext | null>(null);
 
-  function toggle(trait: string) {
-    setSelected((s) => (s.includes(trait) ? s.filter((t) => t !== trait) : [...s, trait]));
-  }
+  const allTraits = Array.from(new Set([...TRAITS, ...extraTraits]));
+  const toggler = (set: React.Dispatch<React.SetStateAction<string[]>>) => (v: string) =>
+    set((s) => (s.includes(v) ? s.filter((x) => x !== v) : [...s, v]));
 
   async function analyseFlow() {
     setAnalyzing(true);
@@ -100,15 +99,17 @@ export function PersonaGenerator({
       const ctx: FlowContext = data.context;
       setFlow(ctx);
       // Pre-fill config from the recommendations (user can still override anything).
-      const tc = mapTechComfort(ctx.recommended_tech_comfort);
-      if (tc) setTechComfort(tc);
-      const age = mapAgeRange(ctx.recommended_age_ranges);
-      if (age) setAgeRange(age);
-      const rec = (ctx.recommended_behavioral_traits ?? []).filter(Boolean);
-      if (rec.length) {
-        const recExtra = rec.filter((t) => !TRAITS.includes(t));
-        if (recExtra.length) setExtraTraits((e) => Array.from(new Set([...e, ...recExtra])));
-        setSelected((s) => Array.from(new Set([...s, ...rec])));
+      const recAges = (ctx.recommended_age_ranges ?? []).map(normAge).filter((a) => AGES.includes(a));
+      if (recAges.length) setAges(recAges);
+      const recRoles = (ctx.recommended_role_levels ?? []).map((r) => ROLE_MAP[r.toLowerCase()] ?? cap(r)).filter((r) => ROLES.includes(r));
+      if (recRoles.length) setRoles(recRoles);
+      const recTech = (ctx.recommended_tech_comfort ?? []).map(cap).filter((t) => TECH.includes(t));
+      if (recTech.length) setTech(recTech);
+      const recTraits = (ctx.recommended_behavioral_traits ?? []).filter(Boolean);
+      if (recTraits.length) {
+        const extra = recTraits.filter((t) => !TRAITS.includes(t));
+        if (extra.length) setExtraTraits((e) => Array.from(new Set([...e, ...extra])));
+        setTraits((s) => Array.from(new Set([...s, ...recTraits])));
       }
     } catch {
       setError("Flow analysis failed");
@@ -126,10 +127,14 @@ export function PersonaGenerator({
       body: JSON.stringify({
         projectId,
         count,
+        industry,
         productType: industry,
-        demographics: ageRange,
-        traits: selected.join(", "),
-        techComfort,
+        demographics: ages.join(", "),
+        genders: genders.join(", "),
+        roleLevels: roles.join(", "),
+        accessibility: access.join(", "),
+        techComfort: tech.join(", "),
+        traits: traits.join(", "),
       }),
     });
     const data = await res.json();
@@ -139,25 +144,19 @@ export function PersonaGenerator({
   }
 
   return (
-    <div className="persona-config">
-      {/* AI flow-context analysis */}
-      <div className="form-row" style={{ marginBottom: 12, alignItems: "flex-end" }}>
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label className="form-label">Industry context</label>
-          <select className="form-select" value={industry} onChange={(e) => setIndustry(e.target.value)}>
-            {INDUSTRIES.map((i) => (
-              <option key={i} value={i}>
-                {i}
-              </option>
-            ))}
-          </select>
+    <div className="persona-engine">
+      <div className="pe-head">
+        <div className="pe-ai-icon">
+          <i className="ti ti-brain" />
         </div>
-        <div className="form-group" style={{ marginBottom: 0, display: "flex", alignItems: "flex-end" }}>
-          <button className="tb-btn" onClick={analyseFlow} disabled={analyzing} style={{ width: "100%", justifyContent: "center" }}>
-            <i className={`ti ${analyzing ? "ti-loader-2" : "ti-sparkles"}`} />
-            {analyzing ? "Analysing flow…" : "Analyse flow"}
-          </button>
+        <div style={{ flex: 1 }}>
+          <div className="pe-title">AI Persona Engine</div>
+          <div className="pe-sub">Reads your flow description and auto-configures relevant personas</div>
         </div>
+        <button className="tb-btn" onClick={analyseFlow} disabled={analyzing}>
+          <i className={`ti ${analyzing ? "ti-loader-2" : "ti-scan"}`} />
+          {analyzing ? "Analysing…" : "Analyse flow"}
+        </button>
       </div>
 
       {flow && (
@@ -180,58 +179,32 @@ export function PersonaGenerator({
         </div>
       )}
 
-      <div className="form-row" style={{ marginBottom: 12 }}>
+      <div className="form-row" style={{ marginBottom: 14 }}>
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label className="form-label">
             Number of personas <small>({count})</small>
           </label>
-          <input
-            type="range"
-            min={1}
-            max={10}
-            value={count}
-            onChange={(e) => setCount(Number(e.target.value))}
-            style={{ width: "100%" }}
-          />
+          <input type="range" min={1} max={10} value={count} onChange={(e) => setCount(Number(e.target.value))} style={{ width: "100%" }} />
         </div>
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label className="form-label">Tech comfort level</label>
-          <select className="form-select" value={techComfort} onChange={(e) => setTechComfort(e.target.value)}>
-            <option value="low to high">Mixed (all levels)</option>
-            <option value="high">High (expert users)</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low (beginners)</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="form-row" style={{ marginBottom: 12 }}>
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label className="form-label">Age range</label>
-          <select className="form-select" value={ageRange} onChange={(e) => setAgeRange(e.target.value)}>
-            {AGE_OPTIONS.map((a) => (
-              <option key={a}>{a}</option>
+          <label className="form-label">Industry context</label>
+          <select className="form-select" value={industry} onChange={(e) => setIndustry(e.target.value)}>
+            {INDUSTRIES.map((i) => (
+              <option key={i} value={i}>
+                {i}
+              </option>
             ))}
           </select>
         </div>
-        <div className="form-group" style={{ marginBottom: 0 }} />
       </div>
 
-      <div className="form-group" style={{ marginBottom: 0 }}>
-        <label className="form-label">
-          Behavioral traits <small>(tap to select)</small>
-        </label>
-        <div className="tag-selector">
-          {allTraits.map((t) => (
-            <span
-              key={t}
-              className={`tag-sel ${selected.includes(t) ? "selected" : ""}`}
-              onClick={() => toggle(t)}
-            >
-              {t}
-            </span>
-          ))}
-        </div>
+      <div className="config-grid">
+        <ChipGroup icon="ti-calendar" label="Age range" options={AGES} selected={ages} onToggle={toggler(setAges)} />
+        <ChipGroup icon="ti-gender-bigender" label="Gender" options={GENDERS} selected={genders} onToggle={toggler(setGenders)} />
+        <ChipGroup icon="ti-briefcase" label="Role level" options={ROLES} selected={roles} onToggle={toggler(setRoles)} />
+        <ChipGroup icon="ti-device-laptop" label="Tech comfort" options={TECH} selected={tech} onToggle={toggler(setTech)} />
+        <ChipGroup icon="ti-accessible" label="Accessibility" options={ACCESS} selected={access} onToggle={toggler(setAccess)} />
+        <ChipGroup icon="ti-brain" label="Behavioural traits" options={allTraits} selected={traits} onToggle={toggler(setTraits)} />
       </div>
 
       <div className="inline-actions">

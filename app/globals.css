@@ -9,41 +9,53 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --bg: #f5f5f3;
+  --bg: #f7f6f3;
   --surface: #ffffff;
-  --surface2: #f0f0ee;
-  --border: #e4e4e0;
-  --border2: #d0d0cb;
-  --text: #1a1a18;
-  --text2: #6b6b65;
-  --text3: #999993;
+  --surface2: #f0efe9;
+  --surface3: #e8e7e0;
+  --border: #e2e1da;
+  --border2: #cccbc2;
+  --border3: #aaa99f;
+  --text: #1c1c18;
+  --text2: #5c5c55;
+  --text3: #9a9990;
   --accent: #1a1a2e;
   --accentfg: #00e5ff;
-  --blue: #378add;
-  --blue-light: #e6f1fb;
-  --blue-text: #185fa5;
-  --green: #639922;
-  --green-light: #eaf3de;
-  --green-text: #3b6d11;
-  --red: #e24b4a;
-  --red-light: #fcebeb;
-  --red-text: #a32d2d;
-  --amber: #ef9f27;
-  --amber-light: #faeeda;
-  --amber-text: #854f0b;
-  --purple-light: #eeedfe;
-  --purple-text: #534ab7;
-  --teal-light: #e1f5ee;
-  --teal-text: #0f6e56;
-  --r: 8px;
+  --blue: #2563eb;
+  --blue-light: #dbeafe;
+  --blue-text: #1d4ed8;
+  --green: #16a34a;
+  --green-light: #dcfce7;
+  --green-text: #15803d;
+  --red: #dc2626;
+  --red-light: #fee2e2;
+  --red-text: #b91c1c;
+  --amber: #d97706;
+  --amber-light: #fef3c7;
+  --amber-text: #92400e;
+  --purple: #7c3aed;
+  --purple-light: #ede9fe;
+  --purple-text: #5b21b6;
+  --teal: #0d9488;
+  --teal-light: #ccfbf1;
+  --teal-text: #0f766e;
+  --r: 7px;
   --rl: 12px;
+  --rxl: 16px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
 body {
-  font-family: "DM Sans", system-ui, sans-serif;
+  font-family: "Instrument Sans", system-ui, sans-serif;
   background: var(--bg);
   min-height: 100vh;
   color: var(--text);
+  font-size: 14px;
+}
+
+.serif {
+  font-family: "Instrument Serif", Georgia, serif;
 }
 
 .mono {
@@ -167,6 +179,17 @@ body {
 
   /* PERSONAS */
   .persona-config { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 16px; margin-bottom: 16px; }
+  /* v2 AI Persona Engine */
+  .persona-engine { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .pe-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .pe-ai-icon { width: 32px; height: 32px; border-radius: var(--r); background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pe-ai-icon i { font-size: 16px; color: var(--accentfg); }
+  .pe-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .pe-sub { font-size: 11px; color: var(--text3); }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 6px; }
+  .cfg-item { min-width: 0; }
+  .cfg-lbl { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+  .cfg-lbl i { font-size: 12px; color: var(--text3); }
   /* Flow-context analysis insight box (spec v2 §6) */
   .flow-insight { background: var(--blue-light); border: 1px solid #b5d4f4; border-left: 3px solid var(--blue); border-radius: var(--r); padding: 12px 14px; margin-bottom: 14px; }
   .flow-insight .fi-title { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--blue-text); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
@@ -178,19 +201,23 @@ body {
   .ti-loader-2 { animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .persona-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .persona-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 14px; }
+  .persona-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 14px; box-shadow: var(--shadow); transition: all .14s; }
+  .persona-card:hover { border-color: var(--border3); box-shadow: var(--shadow-md); }
   .persona-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-  .pa { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .pa { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
   .pa-blue { background: var(--blue-light); color: var(--blue-text); }
   .pa-purple { background: var(--purple-light); color: var(--purple-text); }
   .pa-teal { background: var(--teal-light); color: var(--teal-text); }
   .pa-amber { background: var(--amber-light); color: var(--amber-text); }
-  .pa-name { font-size: 13px; font-weight: 500; color: var(--text); }
-  .pa-role { font-size: 11px; color: var(--text3); }
-  .pa-attrs { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
-  .pa-attr { display: flex; justify-content: space-between; font-size: 11px; }
-  .pa-k { color: var(--text3); }
-  .pa-v { color: var(--text2); font-weight: 500; }
+  .pa-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .pa-role { font-size: 10px; color: var(--text3); margin-top: 1px; }
+  .pa-gender { font-size: 10px; color: var(--text3); }
+  .pa-attrs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-bottom: 8px; }
+  .pa-attr { display: flex; flex-direction: column; gap: 1px; }
+  .pa-k { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
+  .pa-v { font-size: 11px; color: var(--text2); font-weight: 500; }
+  .pc-tech { margin-bottom: 2px; }
+  .pa-motivation { font-size: 10px; color: var(--text3); line-height: 1.5; padding-top: 8px; margin-top: 8px; border-top: 1px solid var(--border); font-style: italic; }
   .traits { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
   .trait { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
   .tech-lbl { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-bottom: 3px; }

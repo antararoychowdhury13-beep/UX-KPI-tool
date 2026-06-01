@@ -6,7 +6,7 @@ import { resolveTextProvider } from "@/lib/ai/providers";
 import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
-import type { Persona, TechComfort } from "@/types/persona";
+import type { GeneratedPersona, Persona, TechComfort } from "@/types/persona";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -16,7 +16,11 @@ export async function POST(req: Request) {
     projectId?: string;
     count?: number;
     productType?: string;
+    industry?: string;
     demographics?: string;
+    genders?: string;
+    roleLevels?: string;
+    accessibility?: string;
     traits?: string;
     techComfort?: string;
   }>(req);
@@ -35,26 +39,44 @@ export async function POST(req: Request) {
   }
 
   const count = Math.max(1, Math.min(body.count ?? 3, 10));
+  const industry = body.industry ?? body.productType ?? "Enterprise Software";
   const generated = await generatePersonas({
     count,
     flowDescription: project.description ?? "",
     productType: body.productType ?? "Enterprise Software",
-    demographics: body.demographics ?? "",
+    industry,
+    ageRanges: body.demographics ?? "",
+    genders: body.genders,
+    roleLevels: body.roleLevels,
+    accessibility: body.accessibility,
     traits: body.traits ?? "",
     techComfort: body.techComfort ?? "low to high",
   });
+
+  const normTech = (g: GeneratedPersona): TechComfort => {
+    if (g.tech_comfort === "low" || g.tech_comfort === "medium" || g.tech_comfort === "high") return g.tech_comfort;
+    const s = g.tech_comfort_score ?? 5;
+    return s <= 3 ? "low" : s <= 6 ? "medium" : "high";
+  };
 
   const rows: Array<Omit<Persona, "id" | "created_at">> = generated.map((g) => ({
     user_id: userId,
     project_id: body.projectId!,
     name: g.name,
-    age_range: String(g.age),
+    age: typeof g.age === "number" ? g.age : null,
+    age_range: g.age_range ?? (typeof g.age === "number" ? String(g.age) : null),
     gender: g.gender,
     occupation: g.occupation,
-    tech_comfort: g.tech_comfort as TechComfort,
+    occupation_detail: g.occupation_detail ?? null,
+    role_level: g.role_level ?? null,
+    location: g.location ?? null,
+    tech_comfort: normTech(g),
+    tech_comfort_score: typeof g.tech_comfort_score === "number" ? g.tech_comfort_score : null,
     behavioral_traits: g.behavioral_traits,
     goals: g.primary_goal,
     frustrations: g.key_frustration,
+    motivation_quote: g.motivation_quote ?? null,
+    accessibility_profile: g.accessibility_profile ?? g.accessibility_needs ?? null,
     experience_years: g.experience_years,
     device_preference: g.device_preference,
     is_template: false,
