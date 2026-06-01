@@ -18,6 +18,7 @@ import type { KPI, KPIMatrix } from "@/types/kpi";
 import type { Organisation } from "@/types/organisation";
 import type { AppNotification } from "@/types/notification";
 import type { AuditEntry } from "@/types/audit";
+import type { WebhookSubscription } from "@/types/webhook";
 import type { AnnotationMap, ApiCallStatus, ApiService, ApiUsageLog, Report } from "@/types/report";
 
 let client: SupabaseClient | null = null;
@@ -147,6 +148,41 @@ export async function recordAudit(input: {
 export async function listAuditLog(limit = 100): Promise<AuditEntry[]> {
   const { data } = await sb().from("audit_log").select("*").order("created_at", { ascending: false }).limit(limit);
   return (data as AuditEntry[]) ?? [];
+}
+
+// ── webhook subscriptions (spec v2 §3) ──────────────────────────────────────────
+export async function listWebhooks(userId: string): Promise<WebhookSubscription[]> {
+  const { data } = await sb().from("webhook_subscriptions").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+  return (data as WebhookSubscription[]) ?? [];
+}
+export async function createWebhook(input: { user_id: string; url: string; event_types: string[]; secret: string }): Promise<WebhookSubscription> {
+  return must(
+    await sb().from("webhook_subscriptions").insert({
+      user_id: input.user_id,
+      url: input.url,
+      event_types: input.event_types,
+      secret: input.secret,
+    }).select("*").single(),
+  ) as WebhookSubscription;
+}
+export async function updateWebhook(id: string, userId: string, patch: Partial<Pick<WebhookSubscription, "is_active" | "url" | "event_types">>): Promise<void> {
+  await sb().from("webhook_subscriptions").update(patch).eq("id", id).eq("user_id", userId);
+}
+export async function deleteWebhook(id: string, userId: string): Promise<void> {
+  await sb().from("webhook_subscriptions").delete().eq("id", id).eq("user_id", userId);
+}
+export async function markWebhookTriggered(id: string, ok: boolean): Promise<void> {
+  try {
+    if (ok) {
+      await sb().from("webhook_subscriptions").update({ last_triggered_at: new Date().toISOString() }).eq("id", id);
+    } else {
+      const { data } = await sb().from("webhook_subscriptions").select("failure_count").eq("id", id).maybeSingle();
+      const fc = ((data as { failure_count?: number } | null)?.failure_count ?? 0) + 1;
+      await sb().from("webhook_subscriptions").update({ failure_count: fc }).eq("id", id);
+    }
+  } catch {
+    /* noop */
+  }
 }
 
 // ── organisations (spec v2 §3) ───────────────────────────────────────────────────

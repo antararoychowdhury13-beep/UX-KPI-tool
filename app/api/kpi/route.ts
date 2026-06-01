@@ -15,6 +15,7 @@ import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { uuid } from "@/lib/utils/ids";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
+import { deliverWebhooks } from "@/lib/webhooks/deliver";
 import type { KPI } from "@/types/kpi";
 
 export const runtime = "nodejs";
@@ -76,6 +77,7 @@ export async function POST(req: Request) {
   await logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/kpi", status: "success" });
   await createNotification({ user_id: userId, type: "kpi_ready", project_id: project.id, message: `KPI matrix ready for "${project.name}" — UX score ${uxAfter} (↑${uxAfter - uxBefore}).` });
   await recordAudit({ user_id: userId, action: "kpi.generated", entity_type: "kpi_matrix", entity_id: matrix.id, metadata: { ux_score_after: uxAfter } });
+  await deliverWebhooks(userId, "kpi.ready", { project_id: project.id, kpi_matrix_id: matrix.id, ux_score_after: uxAfter });
 
   return NextResponse.json(
     {

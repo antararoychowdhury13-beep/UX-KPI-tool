@@ -8,6 +8,7 @@ import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
 import { sseResponse } from "@/lib/sse";
+import { deliverWebhooks } from "@/lib/webhooks/deliver";
 import type { TestingMethod } from "@/types/persona";
 
 export const runtime = "nodejs";
@@ -85,6 +86,7 @@ export async function POST(req: Request) {
       project_id: project.id,
       message: `Synthetic testing finished for "${project.name}" across ${personas.length} personas.`,
     });
+    await deliverWebhooks(userId, "testing.completed", { project_id: project.id, method, personas: personas.length });
     emit({ type: "step", label: "Finalising results", progress: 100 });
     emit({ type: "done" });
   });

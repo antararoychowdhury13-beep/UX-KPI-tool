@@ -3,6 +3,7 @@ import { listAIServices, listOrgMembers } from "@/lib/db";
 import { initials } from "@/lib/utils/initials";
 import { hasSupabase, hasRedis } from "@/lib/config";
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { WebhookManager } from "@/components/settings/WebhookManager";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
@@ -101,6 +102,8 @@ export default async function SettingsPage() {
             </div>
           ))}
         </div>
+
+        <WebhookManager />
       </div>
     </>
   );

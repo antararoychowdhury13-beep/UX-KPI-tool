@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getKpiMatrixByProject, createReport, createNotification, recordAudit } from "@/lib/db";
 import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
+import { deliverWebhooks } from "@/lib/webhooks/deliver";
 
 export const runtime = "nodejs";
 
@@ -27,5 +28,6 @@ export async function POST(req: Request) {
   const report = await createReport({ project_id: projectId, kpi_matrix_id: matrix.id });
   await createNotification({ user_id: userId, type: "report_ready", project_id: projectId, message: "Your UX impact report is ready to view and share." });
   await recordAudit({ user_id: userId, action: "report.created", entity_type: "report", entity_id: report.id });
+  await deliverWebhooks(userId, "report.ready", { project_id: projectId, report_id: report.id, share_token: report.share_token });
   return NextResponse.json({ report }, { status: 201 });
 }

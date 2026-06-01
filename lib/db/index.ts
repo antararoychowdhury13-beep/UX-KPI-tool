@@ -45,6 +45,12 @@ export const markAllNotificationsRead = pick(sb.markAllNotificationsRead, mem.ma
 
 export const recordAudit = pick(sb.recordAudit, mem.recordAudit);
 export const listAuditLog = pick(sb.listAuditLog, mem.listAuditLog);
+
+export const listWebhooks = pick(sb.listWebhooks, mem.listWebhooks);
+export const createWebhook = pick(sb.createWebhook, mem.createWebhook);
+export const updateWebhook = pick(sb.updateWebhook, mem.updateWebhook);
+export const deleteWebhook = pick(sb.deleteWebhook, mem.deleteWebhook);
+export const markWebhookTriggered = pick(sb.markWebhookTriggered, mem.markWebhookTriggered);
 export const adminStats = pick(sb.adminStats, mem.adminStats);
 export const hasQuota = pick(sb.hasQuota, mem.hasQuota);
 export const incrementQuotaUsed = pick(sb.incrementQuotaUsed, mem.incrementQuotaUsed);

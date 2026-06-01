@@ -22,6 +22,7 @@ import type { KPI, KPIMatrix } from "@/types/kpi";
 import type { Organisation } from "@/types/organisation";
 import type { AppNotification } from "@/types/notification";
 import type { AuditEntry } from "@/types/audit";
+import type { WebhookSubscription } from "@/types/webhook";
 import type { AnnotationMap, Report, ApiUsageLog, ApiService, ApiCallStatus, AIService } from "@/types/report";
 
 export interface AnalysisJob {
@@ -48,6 +49,7 @@ interface Store {
   aiServices: Map<string, AIService>;
   notifications: AppNotification[];
   auditLog: AuditEntry[];
+  webhooks: WebhookSubscription[];
 }
 
 const MOCK_USER_ID = "00000000-0000-0000-0000-000000000001";
@@ -68,6 +70,7 @@ function seed(): Store {
     aiServices: new Map(),
     notifications: [],
     auditLog: [],
+    webhooks: [],
   };
 
   const builtinServices: Array<Omit<AIService, "id" | "created_at">> = [
@@ -382,6 +385,39 @@ export function recordAudit(input: {
 }
 export function listAuditLog(limit = 100): AuditEntry[] {
   return db.auditLog.slice(0, limit);
+}
+
+// ── webhook subscriptions ───────────────────────────────────────────────────────
+export function listWebhooks(userId: string): WebhookSubscription[] {
+  return db.webhooks.filter((w) => w.user_id === userId);
+}
+export function createWebhook(input: { user_id: string; url: string; event_types: string[]; secret: string }): WebhookSubscription {
+  const w: WebhookSubscription = {
+    id: uuid(),
+    user_id: input.user_id,
+    url: input.url,
+    event_types: input.event_types,
+    secret: input.secret,
+    is_active: true,
+    last_triggered_at: null,
+    failure_count: 0,
+    created_at: now(),
+  };
+  db.webhooks.unshift(w);
+  return w;
+}
+export function updateWebhook(id: string, userId: string, patch: Partial<Pick<WebhookSubscription, "is_active" | "url" | "event_types">>): void {
+  const w = db.webhooks.find((x) => x.id === id && x.user_id === userId);
+  if (w) Object.assign(w, patch);
+}
+export function deleteWebhook(id: string, userId: string): void {
+  db.webhooks = db.webhooks.filter((x) => !(x.id === id && x.user_id === userId));
+}
+export function markWebhookTriggered(id: string, ok: boolean): void {
+  const w = db.webhooks.find((x) => x.id === id);
+  if (!w) return;
+  if (ok) w.last_triggered_at = now();
+  else w.failure_count += 1;
 }
 
 /** Aggregate counts for the admin overview. */
