@@ -17,6 +17,7 @@ import { readJson, badRequest, unauthorized } from "@/lib/http";
 import type { KPI } from "@/types/kpi";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const body = await readJson<{ projectId?: string; industryContext?: string }>(req);

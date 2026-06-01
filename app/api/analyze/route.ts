@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const body = await readJson<{ projectId?: string }>(req);

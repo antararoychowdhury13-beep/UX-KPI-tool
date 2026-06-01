@@ -57,10 +57,16 @@ export async function ensureUser(input: {
 }): Promise<User> {
   const existing = await getUser(input.id);
   if (existing) return existing;
+  // New users default to 'user'. Admin is granted only to emails in the ADMIN_EMAILS allowlist
+  // (comma-separated) — important now that the app is publicly deployed.
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const role = adminEmails.includes(input.email.toLowerCase()) ? "admin" : "user";
   const { data, error } = await sb()
     .from("users")
-    // New users get admin in this single-tenant demo; tighten to 'user' for multi-tenant.
-    .insert({ id: input.id, email: input.email, full_name: input.full_name, role: "admin", quota_analyses: 10, quota_used: 0 })
+    .insert({ id: input.id, email: input.email, full_name: input.full_name, role, quota_analyses: 10, quota_used: 0 })
     .select("*")
     .single();
   if (error) throw new Error(`ensureUser failed: ${error.message}`);

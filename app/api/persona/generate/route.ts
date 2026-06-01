@@ -9,6 +9,7 @@ import { readJson, badRequest, unauthorized } from "@/lib/http";
 import type { Persona, TechComfort } from "@/types/persona";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const body = await readJson<{
