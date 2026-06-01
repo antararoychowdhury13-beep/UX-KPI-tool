@@ -10,6 +10,8 @@ export interface User {
   role: UserRole;
   quota_analyses: number;
   quota_used: number;
+  /** organisation membership (spec v2 §3); optional — null for solo users / pre-migration. */
+  org_id?: string | null;
   created_at: string;
   updated_at: string;
 }

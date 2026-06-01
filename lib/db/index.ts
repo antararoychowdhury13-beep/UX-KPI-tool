@@ -32,6 +32,11 @@ const pick = <A extends unknown[], R>(
 
 export const getUser = pick(sb.getUser, mem.getUser);
 export const listUsers = pick(sb.listUsers, mem.listUsers);
+
+export const getOrganisation = pick(sb.getOrganisation, mem.getOrganisation);
+export const listOrganisations = pick(sb.listOrganisations, mem.listOrganisations);
+export const listOrgMembers = pick(sb.listOrgMembers, mem.listOrgMembers);
+export const ensureOrgForUser = pick(sb.ensureOrgForUser, mem.ensureOrgForUser);
 export const adminStats = pick(sb.adminStats, mem.adminStats);
 export const hasQuota = pick(sb.hasQuota, mem.hasQuota);
 export const incrementQuotaUsed = pick(sb.incrementQuotaUsed, mem.incrementQuotaUsed);

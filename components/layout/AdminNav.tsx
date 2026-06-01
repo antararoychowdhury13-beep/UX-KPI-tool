@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const ITEMS = [
   { href: "/admin", icon: "ti-gauge", label: "Overview" },
+  { href: "/admin/organisations", icon: "ti-building", label: "Organisations" },
   { href: "/admin/users", icon: "ti-users", label: "Users & quota" },
   { href: "/admin/api-config", icon: "ti-plug-connected", label: "AI services" },
   { href: "/admin/persona-templates", icon: "ti-id-badge-2", label: "Persona templates" },

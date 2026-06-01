@@ -2,10 +2,11 @@
 // ensures a matching public.users row. In mock mode (no Supabase) it returns the seeded demo user.
 import { cache } from "react";
 import { hasSupabase } from "@/lib/config";
-import { CURRENT_USER_ID, getUser, getProject } from "@/lib/db";
+import { CURRENT_USER_ID, getUser, getProject, ensureOrgForUser } from "@/lib/db";
 import { ensureUser } from "@/lib/db/supabase";
 import { createClient } from "@/lib/supabase/server";
 import type { Project, User } from "@/types/project";
+import type { Organisation } from "@/types/organisation";
 
 // Memoized per request so repeated calls (layout + page) don't re-query.
 export const getCurrentUser = cache(async (): Promise<User> => {
@@ -31,6 +32,16 @@ export const getCurrentUser = cache(async (): Promise<User> => {
 export async function getCurrentUserId(): Promise<string> {
   return (await getCurrentUser()).id;
 }
+
+/** The current user's organisation (best-effort; null if none / pre-migration). Memoized per request. */
+export const getCurrentOrg = cache(async (): Promise<Organisation | null> => {
+  try {
+    const user = await getCurrentUser();
+    return await ensureOrgForUser(user);
+  } catch {
+    return null;
+  }
+});
 
 /** Non-throwing variants for API routes that should return 401 (not 500) when unauthenticated. */
 export async function getCurrentUserOrNull(): Promise<User | null> {

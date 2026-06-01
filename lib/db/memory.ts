@@ -19,6 +19,7 @@ import type {
 import type { Persona } from "@/types/persona";
 import type { SyntheticTestResult } from "@/types/persona";
 import type { KPI, KPIMatrix } from "@/types/kpi";
+import type { Organisation } from "@/types/organisation";
 import type { AnnotationMap, Report, ApiUsageLog, ApiService, ApiCallStatus, AIService } from "@/types/report";
 
 export interface AnalysisJob {
@@ -31,6 +32,7 @@ export interface AnalysisJob {
 }
 
 interface Store {
+  organisations: Map<string, Organisation>;
   users: Map<string, User>;
   projects: Map<string, Project>;
   screenshots: Map<string, Screenshot>;
@@ -48,6 +50,7 @@ const MOCK_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 function seed(): Store {
   const store: Store = {
+    organisations: new Map(),
     users: new Map(),
     projects: new Map(),
     screenshots: new Map(),
@@ -73,6 +76,17 @@ function seed(): Store {
     store.aiServices.set(id, { id, created_at: now(), ...s });
   }
 
+  const MOCK_ORG_ID = "00000000-0000-0000-0000-0000000000a1";
+  store.organisations.set(MOCK_ORG_ID, {
+    id: MOCK_ORG_ID,
+    name: "Acme Design Studio",
+    slug: "acme-design-studio",
+    plan: "pro",
+    quota_analyses_per_month: 50,
+    quota_users_max: 10,
+    created_at: now(),
+  });
+
   store.users.set(MOCK_USER_ID, {
     id: MOCK_USER_ID,
     email: "demo@uxkpi.local",
@@ -80,6 +94,7 @@ function seed(): Store {
     role: "admin",
     quota_analyses: 10,
     quota_used: 0,
+    org_id: MOCK_ORG_ID,
     created_at: now(),
     updated_at: now(),
   });
@@ -280,6 +295,33 @@ export function getUser(id: string): User | undefined {
 
 export function listUsers(): User[] {
   return [...db.users.values()].sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+// ── organisations ───────────────────────────────────────────────────────────────
+export function getOrganisation(id: string): Organisation | undefined {
+  return db.organisations.get(id);
+}
+export function listOrganisations(): Organisation[] {
+  return [...db.organisations.values()].sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+export function listOrgMembers(orgId: string): User[] {
+  return [...db.users.values()].filter((u) => u.org_id === orgId);
+}
+export function ensureOrgForUser(user: User): Organisation | null {
+  if (user.org_id) return db.organisations.get(user.org_id) ?? null;
+  const org: Organisation = {
+    id: uuid(),
+    name: `${user.full_name ?? user.email}'s workspace`,
+    slug: null,
+    plan: "free",
+    quota_analyses_per_month: 10,
+    quota_users_max: 5,
+    created_at: now(),
+  };
+  db.organisations.set(org.id, org);
+  const u = db.users.get(user.id);
+  if (u) db.users.set(u.id, { ...u, org_id: org.id });
+  return org;
 }
 
 /** Aggregate counts for the admin overview. */

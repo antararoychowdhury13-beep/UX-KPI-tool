@@ -15,6 +15,7 @@ import type {
 } from "@/types/project";
 import type { Persona, SyntheticTestResult } from "@/types/persona";
 import type { KPI, KPIMatrix } from "@/types/kpi";
+import type { Organisation } from "@/types/organisation";
 import type { AnnotationMap, ApiCallStatus, ApiService, ApiUsageLog, Report } from "@/types/report";
 
 let client: SupabaseClient | null = null;
@@ -75,6 +76,40 @@ export async function ensureUser(input: {
 
 export async function listUsers(): Promise<User[]> {
   return must(await sb().from("users").select("*").order("created_at")) as User[];
+}
+
+// ── organisations (spec v2 §3) ───────────────────────────────────────────────────
+export async function getOrganisation(id: string): Promise<Organisation | undefined> {
+  const { data } = await sb().from("organisations").select("*").eq("id", id).maybeSingle();
+  return (data as Organisation) ?? undefined;
+}
+export async function listOrganisations(): Promise<Organisation[]> {
+  const { data } = await sb().from("organisations").select("*").order("created_at");
+  return (data as Organisation[]) ?? [];
+}
+export async function listOrgMembers(orgId: string): Promise<User[]> {
+  const { data } = await sb().from("users").select("*").eq("org_id", orgId).order("created_at");
+  return (data as User[]) ?? [];
+}
+
+/**
+ * Best-effort: return the user's organisation, creating a personal one on first use. Returns null
+ * (never throws) if the organisations table / users.org_id column isn't present yet — i.e. the app
+ * keeps working exactly as before until migration 0005 is applied.
+ */
+export async function ensureOrgForUser(user: User): Promise<Organisation | null> {
+  try {
+    if (user.org_id) return (await getOrganisation(user.org_id)) ?? null;
+    const name = `${user.full_name ?? user.email}'s workspace`;
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) + "-" + user.id.slice(0, 6);
+    const created = await sb().from("organisations").insert({ name, slug }).select("*").single();
+    if (created.error) return null;
+    const org = created.data as Organisation;
+    await sb().from("users").update({ org_id: org.id }).eq("id", user.id);
+    return org;
+  } catch {
+    return null;
+  }
 }
 
 export async function adminStats() {

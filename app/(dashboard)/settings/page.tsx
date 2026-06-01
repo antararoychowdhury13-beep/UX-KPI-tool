@@ -1,11 +1,13 @@
-import { getCurrentUser } from "@/lib/auth";
-import { listAIServices } from "@/lib/db";
+import { getCurrentUser, getCurrentOrg } from "@/lib/auth";
+import { listAIServices, listOrgMembers } from "@/lib/db";
 import { initials } from "@/lib/utils/initials";
 import { hasSupabase, hasRedis } from "@/lib/config";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
+  const org = await getCurrentOrg();
+  const members = org ? await listOrgMembers(org.id) : [];
   // Derive AI services from the managed list (same source as the admin panel) so they stay in sync.
   const aiServices: Array<[string, boolean]> = listAIServices().map((s) => [
     s.name,
@@ -43,6 +45,44 @@ export default async function SettingsPage() {
           </div>
           <SignOutButton />
         </div>
+
+        {org && (
+          <div className="card">
+            <div className="rs-title">
+              <i className="ti ti-building" /> Organisation
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{org.name}</div>
+              <span className={`badge ${org.plan === "free" ? "b-proc" : "b-done"}`} style={{ textTransform: "capitalize" }}>
+                {org.plan}
+              </span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "var(--text2)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 6, borderTop: "1px solid var(--border)" }}>
+                <span style={{ color: "var(--text3)" }}>Members</span>
+                <span>{members.length} / {org.quota_users_max}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 6, borderTop: "1px solid var(--border)" }}>
+                <span style={{ color: "var(--text3)" }}>Monthly analyses</span>
+                <span>{org.quota_analyses_per_month}</span>
+              </div>
+            </div>
+            {members.length > 0 && (
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
+                <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 8 }}>Team members</div>
+                {members.slice(0, 6).map((m) => (
+                  <div key={m.id} className="user-row" style={{ marginBottom: 6 }}>
+                    <div className="user-avatar" style={{ width: 26, height: 26, fontSize: 10 }}>{initials(m.full_name ?? m.email)}</div>
+                    <div>
+                      <div className="user-name" style={{ fontSize: 12 }}>{m.full_name ?? m.email}</div>
+                      <div className="user-role" style={{ fontSize: 10 }}>{m.role}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="card">
           <div className="rs-title">
