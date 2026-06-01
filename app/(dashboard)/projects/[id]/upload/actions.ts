@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { updateProject, getProject } from "@/lib/db";
+import { updateProject } from "@/lib/db";
+import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 
 export async function updateProjectSettings(formData: FormData) {
   const id = String(formData.get("projectId") ?? "");
-  if (!(await getProject(id))) return;
+  if (!(await getOwnedProject(id, await getCurrentUserId()))) return;
   await updateProject(id, {
     name: String(formData.get("name") ?? ""),
     description: String(formData.get("description") ?? ""),

@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProject, getLatestAnalysis, getKpiMatrixByProject } from "@/lib/db";
+import { getLatestAnalysis, getKpiMatrixByProject } from "@/lib/db";
+import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { StepRow } from "@/components/layout/StepRow";
 import { KPIMatrix } from "@/components/kpi/KPIMatrix";
 import { GenerateKpiButton } from "@/components/kpi/GenerateKpiButton";
 import { ExportCsvButton } from "@/components/kpi/ExportCsvButton";
 
 export default async function KpiPage({ params }: { params: { id: string } }) {
-  const project = await getProject(params.id);
+  const project = await getOwnedProject(params.id, await getCurrentUserId());
   if (!project) notFound();
 
   const [analysis, matrix] = await Promise.all([

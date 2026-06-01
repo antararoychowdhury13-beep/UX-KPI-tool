@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProject, getLatestAnalysis, listPersonas, listTestResults } from "@/lib/db";
-import { getCurrentUserId } from "@/lib/auth";
+import { getLatestAnalysis, listPersonas, listTestResults } from "@/lib/db";
+import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { initials, avatarTone } from "@/lib/utils/initials";
 import { StepRow } from "@/components/layout/StepRow";
 import { RunTestsButton } from "@/components/analysis/RunTestsButton";
@@ -16,10 +16,10 @@ function frictionCounts(points: FrictionPoint[]) {
 }
 
 export default async function TestingPage({ params }: { params: { id: string } }) {
-  const project = await getProject(params.id);
+  const userId = await getCurrentUserId();
+  const project = await getOwnedProject(params.id, userId);
   if (!project) notFound();
 
-  const userId = await getCurrentUserId();
   const [analysis, allPersonas, results] = await Promise.all([
     getLatestAnalysis(project.id),
     listPersonas(userId, project.id),

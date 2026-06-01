@@ -1,21 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  getProject,
   listScreenshots,
   getLatestAnalysis,
   listPersonas,
   getKpiMatrixByProject,
   getReportByProject,
 } from "@/lib/db";
-import { getCurrentUserId } from "@/lib/auth";
+import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { Badge, statusTone } from "@/components/ui/Badge";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
-  const project = await getProject(params.id);
+  const userId = await getCurrentUserId();
+  const project = await getOwnedProject(params.id, userId);
   if (!project) notFound();
 
-  const userId = await getCurrentUserId();
   const [screenshots, analysis, allPersonas, kpi, report] = await Promise.all([
     listScreenshots(project.id),
     getLatestAnalysis(project.id),

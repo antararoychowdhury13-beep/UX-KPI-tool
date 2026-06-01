@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { getProject, listScreenshots } from "@/lib/db";
+import { listScreenshots } from "@/lib/db";
+import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { StepRow } from "@/components/layout/StepRow";
 import { ScreenshotUploader } from "@/components/upload/ScreenshotUploader";
 import { AnalyzeButton } from "@/components/analysis/AnalyzeButton";
@@ -9,7 +10,7 @@ import { updateProjectSettings } from "./actions";
 const FLOW_TYPES = ["dashboard", "onboarding", "settings", "form", "navigation", "custom"];
 
 export default async function UploadPage({ params }: { params: { id: string } }) {
-  const project = await getProject(params.id);
+  const project = await getOwnedProject(params.id, await getCurrentUserId());
   if (!project) notFound();
 
   const screenshots = await listScreenshots(project.id);

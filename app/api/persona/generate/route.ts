@@ -1,9 +1,9 @@
 // POST /api/persona/generate — generate synthetic personas via Claude and attach them to a project.
 import { NextResponse } from "next/server";
-import { getProject, addPersonas, logApiUsage } from "@/lib/db";
+import { addPersonas, logApiUsage } from "@/lib/db";
 import { generatePersonas } from "@/lib/ai/claude";
 import { resolveTextProvider } from "@/lib/ai/providers";
-import { getCurrentUserIdOrNull } from "@/lib/auth";
+import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
 import type { Persona, TechComfort } from "@/types/persona";
@@ -22,13 +22,14 @@ export async function POST(req: Request) {
   }>(req);
   if (!body) return badRequest("Invalid JSON body");
 
-  const project = body.projectId ? await getProject(body.projectId) : undefined;
+  const userId = await getCurrentUserIdOrNull();
+  if (!userId) return unauthorized();
+
+  const project = body.projectId ? await getOwnedProject(body.projectId, userId) : null;
   if (!project) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
 
-  const userId = await getCurrentUserIdOrNull();
-  if (!userId) return unauthorized();
   if (!(await checkRateLimit(userId))) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }

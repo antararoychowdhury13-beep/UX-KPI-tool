@@ -1,7 +1,6 @@
 // POST /api/kpi — generate the KPI matrix from the latest analysis, personas, and test results.
 import { NextResponse } from "next/server";
 import {
-  getProject,
   getLatestAnalysis,
   listPersonas,
   listTestResults,
@@ -10,7 +9,7 @@ import {
 } from "@/lib/db";
 import { generateKpiMatrix } from "@/lib/ai/claude";
 import { resolveTextProvider } from "@/lib/ai/providers";
-import { getCurrentUserIdOrNull } from "@/lib/auth";
+import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { uuid } from "@/lib/utils/ids";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
@@ -20,20 +19,22 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
+  const userId = await getCurrentUserIdOrNull();
+  if (!userId) return unauthorized();
+
   const body = await readJson<{ projectId?: string; industryContext?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
   const { projectId, industryContext } = body;
-  if (!projectId || !(await getProject(projectId))) {
+  const project = projectId ? await getOwnedProject(projectId, userId) : null;
+  if (!project) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
 
-  const userId = await getCurrentUserIdOrNull();
-  if (!userId) return unauthorized();
   if (!(await checkRateLimit(userId))) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }
 
-  const analysis = await getLatestAnalysis(projectId);
+  const analysis = await getLatestAnalysis(project.id);
   if (!analysis) {
     return NextResponse.json(
       { error: "Run analysis before generating KPIs" },
@@ -41,10 +42,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const personas = (await listPersonas(userId, projectId)).filter(
-    (p) => p.project_id === projectId,
+  const personas = (await listPersonas(userId, project.id)).filter(
+    (p) => p.project_id === project.id,
   );
-  const testResults = await listTestResults(projectId);
+  const testResults = await listTestResults(project.id);
 
   const result = await generateKpiMatrix({
     analysisJson: JSON.stringify(analysis.flow_diff ?? {}),
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
 
   const matrix = await createKpiMatrix({
     analysis_id: analysis.id,
-    project_id: projectId,
+    project_id: project.id,
     kpis,
     overall_confidence: result.overall_confidence,
   });

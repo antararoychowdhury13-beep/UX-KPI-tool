@@ -2,7 +2,6 @@
 // Stores one synthetic_test_results row per persona per flow variant.
 import { NextResponse } from "next/server";
 import {
-  getProject,
   getLatestAnalysis,
   listPersonas,
   addTestResult,
@@ -10,7 +9,7 @@ import {
 } from "@/lib/db";
 import { runSyntheticTest } from "@/lib/ai/claude";
 import { resolveTextProvider } from "@/lib/ai/providers";
-import { getCurrentUserIdOrNull } from "@/lib/auth";
+import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
 
@@ -18,24 +17,25 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
+  const userId = await getCurrentUserIdOrNull();
+  if (!userId) return unauthorized();
+
   const body = await readJson<{ projectId?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
   const { projectId } = body;
-  if (!projectId || !(await getProject(projectId))) {
+  const project = projectId ? await getOwnedProject(projectId, userId) : null;
+  if (!project) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
 
-  const userId = await getCurrentUserIdOrNull();
-  if (!userId) return unauthorized();
   if (!(await checkRateLimit(userId))) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }
 
-  const project = (await getProject(projectId))!;
-  const analysis = await getLatestAnalysis(projectId);
+  const analysis = await getLatestAnalysis(project.id);
   const keyChanges = JSON.stringify(analysis?.flow_diff?.key_changes ?? []);
-  const personas = (await listPersonas(userId, projectId)).filter(
-    (p) => p.project_id === projectId,
+  const personas = (await listPersonas(userId, project.id)).filter(
+    (p) => p.project_id === project.id,
   );
 
   if (personas.length === 0) {
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       });
       results.push(
         await addTestResult({
-          project_id: projectId,
+          project_id: project.id,
           persona_id: persona.id,
           flow_type: flowType,
           task_success_rate: raw.task_success_rate,

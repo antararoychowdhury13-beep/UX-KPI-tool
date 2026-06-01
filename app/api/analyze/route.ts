@@ -1,8 +1,8 @@
 // POST /api/analyze — queue (or inline-run) screenshot analysis for a project. Returns a job id.
 import { NextResponse } from "next/server";
-import { getProject, listScreenshots, hasQuota, incrementQuotaUsed, logApiUsage } from "@/lib/db";
+import { listScreenshots, hasQuota, incrementQuotaUsed, logApiUsage } from "@/lib/db";
 import { enqueueAnalysis } from "@/lib/queue/analysisQueue";
-import { getCurrentUserIdOrNull } from "@/lib/auth";
+import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
 import { readJson, badRequest, unauthorized } from "@/lib/http";
 
@@ -10,15 +10,16 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
+  const userId = await getCurrentUserIdOrNull();
+  if (!userId) return unauthorized();
+
   const body = await readJson<{ projectId?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
   const { projectId } = body;
-  if (!projectId || !(await getProject(projectId))) {
+  if (!projectId || !(await getOwnedProject(projectId, userId))) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
 
-  const userId = await getCurrentUserIdOrNull();
-  if (!userId) return unauthorized();
   if (!(await checkRateLimit(userId))) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }

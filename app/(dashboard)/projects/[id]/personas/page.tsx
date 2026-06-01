@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProject, listPersonas } from "@/lib/db";
-import { getCurrentUserId } from "@/lib/auth";
+import { listPersonas } from "@/lib/db";
+import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { StepRow } from "@/components/layout/StepRow";
 import { PersonaCard } from "@/components/persona/PersonaCard";
 import { PersonaGenerator } from "@/components/persona/PersonaGenerator";
 
 export default async function PersonasPage({ params }: { params: { id: string } }) {
-  const project = await getProject(params.id);
+  const userId = await getCurrentUserId();
+  const project = await getOwnedProject(params.id, userId);
   if (!project) notFound();
 
-  const userId = await getCurrentUserId();
   const personas = (await listPersonas(userId, project.id)).filter((p) => p.project_id === project.id);
 
   return (

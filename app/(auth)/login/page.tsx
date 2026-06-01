@@ -25,8 +25,10 @@ export default function LoginPage() {
       setBusy(false);
       return;
     }
-    const next = new URLSearchParams(window.location.search).get("next");
-    router.push(next || "/dashboard");
+    // Only allow same-site relative paths (prevents open-redirect via ?next=https://evil.com).
+    const raw = new URLSearchParams(window.location.search).get("next");
+    const next = raw && /^\/(?!\/)/.test(raw) ? raw : "/dashboard";
+    router.push(next);
     router.refresh();
   }
 

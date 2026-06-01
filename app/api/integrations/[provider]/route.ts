@@ -2,9 +2,9 @@
 // Mock-aware: reports whether the integration is configured (env key present). When configured
 // it returns a (simulated) artifact reference; real API calls are wired per provider later.
 import { NextResponse } from "next/server";
-import { getProject } from "@/lib/db";
 import { hasMural, hasFigma, hasJira, hasConfluence } from "@/lib/config";
-import { readJson, badRequest } from "@/lib/http";
+import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
+import { readJson, badRequest, unauthorized } from "@/lib/http";
 
 export const runtime = "nodejs";
 
@@ -22,8 +22,10 @@ export async function POST(req: Request, { params }: { params: { provider: strin
   const cfg = PROVIDERS[provider];
   if (!cfg) return NextResponse.json({ error: "Unknown integration" }, { status: 404 });
 
+  const userId = await getCurrentUserIdOrNull();
+  if (!userId) return unauthorized();
   const body = await readJson<{ projectId?: string }>(req);
-  if (!body?.projectId || !(await getProject(body.projectId))) return badRequest("Unknown project");
+  if (!body?.projectId || !(await getOwnedProject(body.projectId, userId))) return badRequest("Unknown project");
 
   if (!cfg.configured()) {
     return NextResponse.json({

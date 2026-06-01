@@ -1,22 +1,21 @@
 import { notFound } from "next/navigation";
 import {
-  getProject,
   getLatestAnalysis,
   getKpiMatrixByProject,
   getReportByProject,
   listPersonas,
   listTestResults,
 } from "@/lib/db";
-import { getCurrentUserId } from "@/lib/auth";
+import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { StepRow } from "@/components/layout/StepRow";
 import { ReportDashboard } from "@/components/report/ReportDashboard";
 import { GenerateReportButton } from "@/components/report/GenerateReportButton";
 
 export default async function ReportPage({ params }: { params: { id: string } }) {
-  const project = await getProject(params.id);
+  const userId = await getCurrentUserId();
+  const project = await getOwnedProject(params.id, userId);
   if (!project) notFound();
 
-  const userId = await getCurrentUserId();
   const [matrix, analysis, report, allPersonas, testResults] = await Promise.all([
     getKpiMatrixByProject(project.id),
     getLatestAnalysis(project.id),

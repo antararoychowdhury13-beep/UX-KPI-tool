@@ -3,9 +3,9 @@
 // In mock mode we store metadata only (file_path is a placeholder); when Supabase Storage is
 // wired, upload bytes to the `project-screenshots` bucket and store the returned path.
 import { NextResponse } from "next/server";
-import { getProject, addScreenshots } from "@/lib/db";
+import { addScreenshots } from "@/lib/db";
 import { uploadScreenshot } from "@/lib/storage";
-import { getCurrentUserIdOrNull } from "@/lib/auth";
+import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { unauthorized } from "@/lib/http";
 import { parseSequence, parseScreenLabel, isAcceptedImage } from "@/lib/utils/fileNaming";
 import type { ScreenshotType } from "@/types/project";
@@ -13,12 +13,13 @@ import type { ScreenshotType } from "@/types/project";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  if (!(await getCurrentUserIdOrNull())) return unauthorized();
+  const userId = await getCurrentUserIdOrNull();
+  if (!userId) return unauthorized();
   const form = await req.formData();
   const projectId = String(form.get("projectId") ?? "");
   const type = String(form.get("type") ?? "") as ScreenshotType;
 
-  if (!projectId || !(await getProject(projectId))) {
+  if (!projectId || !(await getOwnedProject(projectId, userId))) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
   if (type !== "before" && type !== "after") {

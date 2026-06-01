@@ -2,10 +2,10 @@
 // ensures a matching public.users row. In mock mode (no Supabase) it returns the seeded demo user.
 import { cache } from "react";
 import { hasSupabase } from "@/lib/config";
-import { CURRENT_USER_ID, getUser } from "@/lib/db";
+import { CURRENT_USER_ID, getUser, getProject } from "@/lib/db";
 import { ensureUser } from "@/lib/db/supabase";
 import { createClient } from "@/lib/supabase/server";
-import type { User } from "@/types/project";
+import type { Project, User } from "@/types/project";
 
 // Memoized per request so repeated calls (layout + page) don't re-query.
 export const getCurrentUser = cache(async (): Promise<User> => {
@@ -43,6 +43,16 @@ export async function getCurrentUserOrNull(): Promise<User | null> {
 
 export async function getCurrentUserIdOrNull(): Promise<string | null> {
   return (await getCurrentUserOrNull())?.id ?? null;
+}
+
+/** Returns the project only if it exists AND belongs to the user — else null (prevents IDOR).
+ *  The data layer uses the service-role key (bypasses RLS), so ownership must be enforced here. */
+export async function getOwnedProject(
+  projectId: string,
+  userId: string,
+): Promise<Project | null> {
+  const project = await getProject(projectId);
+  return project && project.user_id === userId ? project : null;
 }
 
 /** True when a session exists (used to decide redirects). */
