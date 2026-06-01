@@ -17,6 +17,7 @@ import type { Persona, SyntheticTestResult } from "@/types/persona";
 import type { KPI, KPIMatrix } from "@/types/kpi";
 import type { Organisation } from "@/types/organisation";
 import type { AppNotification } from "@/types/notification";
+import type { AuditEntry } from "@/types/audit";
 import type { AnnotationMap, ApiCallStatus, ApiService, ApiUsageLog, Report } from "@/types/report";
 
 let client: SupabaseClient | null = null;
@@ -119,6 +120,33 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
   } catch {
     /* noop */
   }
+}
+
+// ── audit log (spec v2 §3) — best-effort write, never blocks the request ───────────
+export async function recordAudit(input: {
+  user_id?: string | null;
+  org_id?: string | null;
+  action: string;
+  entity_type?: string;
+  entity_id?: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    await sb().from("audit_log").insert({
+      user_id: input.user_id ?? null,
+      org_id: input.org_id ?? null,
+      action: input.action,
+      entity_type: input.entity_type ?? null,
+      entity_id: input.entity_id ?? null,
+      metadata: input.metadata ?? null,
+    });
+  } catch {
+    /* table may not exist pre-migration 0006 */
+  }
+}
+export async function listAuditLog(limit = 100): Promise<AuditEntry[]> {
+  const { data } = await sb().from("audit_log").select("*").order("created_at", { ascending: false }).limit(limit);
+  return (data as AuditEntry[]) ?? [];
 }
 
 // ── organisations (spec v2 §3) ───────────────────────────────────────────────────

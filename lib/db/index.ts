@@ -42,6 +42,9 @@ export const createNotification = pick(sb.createNotification, mem.createNotifica
 export const listNotifications = pick(sb.listNotifications, mem.listNotifications);
 export const markNotificationRead = pick(sb.markNotificationRead, mem.markNotificationRead);
 export const markAllNotificationsRead = pick(sb.markAllNotificationsRead, mem.markAllNotificationsRead);
+
+export const recordAudit = pick(sb.recordAudit, mem.recordAudit);
+export const listAuditLog = pick(sb.listAuditLog, mem.listAuditLog);
 export const adminStats = pick(sb.adminStats, mem.adminStats);
 export const hasQuota = pick(sb.hasQuota, mem.hasQuota);
 export const incrementQuotaUsed = pick(sb.incrementQuotaUsed, mem.incrementQuotaUsed);

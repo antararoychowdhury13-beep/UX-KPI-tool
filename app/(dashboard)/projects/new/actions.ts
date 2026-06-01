@@ -1,19 +1,21 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createProject } from "@/lib/db";
+import { createProject, recordAudit } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 
 export async function createProjectAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) redirect("/projects/new?error=name");
 
+  const userId = await getCurrentUserId();
   const project = await createProject({
-    user_id: await getCurrentUserId(),
+    user_id: userId,
     name,
     description: String(formData.get("description") ?? ""),
     flow_type: String(formData.get("flow_type") ?? "custom"),
   });
+  await recordAudit({ user_id: userId, action: "project.created", entity_type: "project", entity_id: project.id, metadata: { name } });
 
   redirect(`/projects/${project.id}/upload`);
 }

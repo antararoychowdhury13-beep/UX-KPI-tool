@@ -7,6 +7,7 @@ import {
   createKpiMatrix,
   logApiUsage,
   createNotification,
+  recordAudit,
 } from "@/lib/db";
 import { generateKpiMatrix } from "@/lib/ai/claude";
 import { resolveTextProvider } from "@/lib/ai/providers";
@@ -74,6 +75,7 @@ export async function POST(req: Request) {
   });
   await logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/kpi", status: "success" });
   await createNotification({ user_id: userId, type: "kpi_ready", project_id: project.id, message: `KPI matrix ready for "${project.name}" — UX score ${uxAfter} (↑${uxAfter - uxBefore}).` });
+  await recordAudit({ user_id: userId, action: "kpi.generated", entity_type: "kpi_matrix", entity_id: matrix.id, metadata: { ux_score_after: uxAfter } });
 
   return NextResponse.json(
     {

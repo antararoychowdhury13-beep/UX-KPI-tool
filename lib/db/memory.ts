@@ -21,6 +21,7 @@ import type { SyntheticTestResult } from "@/types/persona";
 import type { KPI, KPIMatrix } from "@/types/kpi";
 import type { Organisation } from "@/types/organisation";
 import type { AppNotification } from "@/types/notification";
+import type { AuditEntry } from "@/types/audit";
 import type { AnnotationMap, Report, ApiUsageLog, ApiService, ApiCallStatus, AIService } from "@/types/report";
 
 export interface AnalysisJob {
@@ -46,6 +47,7 @@ interface Store {
   apiUsage: ApiUsageLog[];
   aiServices: Map<string, AIService>;
   notifications: AppNotification[];
+  auditLog: AuditEntry[];
 }
 
 const MOCK_USER_ID = "00000000-0000-0000-0000-000000000001";
@@ -65,6 +67,7 @@ function seed(): Store {
     apiUsage: [],
     aiServices: new Map(),
     notifications: [],
+    auditLog: [],
   };
 
   const builtinServices: Array<Omit<AIService, "id" | "created_at">> = [
@@ -355,6 +358,30 @@ export function markAllNotificationsRead(userId: string): void {
   db.notifications.forEach((n) => {
     if (n.user_id === userId) n.is_read = true;
   });
+}
+
+// ── audit log ───────────────────────────────────────────────────────────────────
+export function recordAudit(input: {
+  user_id?: string | null;
+  org_id?: string | null;
+  action: string;
+  entity_type?: string;
+  entity_id?: string;
+  metadata?: Record<string, unknown>;
+}): void {
+  db.auditLog.unshift({
+    id: uuid(),
+    user_id: input.user_id ?? null,
+    org_id: input.org_id ?? null,
+    action: input.action,
+    entity_type: input.entity_type ?? null,
+    entity_id: input.entity_id ?? null,
+    metadata: input.metadata ?? null,
+    created_at: now(),
+  });
+}
+export function listAuditLog(limit = 100): AuditEntry[] {
+  return db.auditLog.slice(0, limit);
 }
 
 /** Aggregate counts for the admin overview. */

@@ -1,6 +1,6 @@
 // POST /api/persona/generate — generate synthetic personas via Claude and attach them to a project.
 import { NextResponse } from "next/server";
-import { addPersonas, logApiUsage } from "@/lib/db";
+import { addPersonas, logApiUsage, recordAudit } from "@/lib/db";
 import { generatePersonas } from "@/lib/ai/claude";
 import { resolveTextProvider } from "@/lib/ai/providers";
 import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
@@ -86,5 +86,6 @@ export async function POST(req: Request) {
 
   const personas = await addPersonas(rows);
   await logApiUsage({ user_id: userId, service: resolveTextProvider()?.slug ?? "claude", endpoint: "/api/persona/generate", status: "success" });
+  await recordAudit({ user_id: userId, action: "persona.generated", entity_type: "project", entity_id: project.id, metadata: { count: personas.length } });
   return NextResponse.json({ personas }, { status: 201 });
 }

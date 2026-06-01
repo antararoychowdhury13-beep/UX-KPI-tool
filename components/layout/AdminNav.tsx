@@ -11,6 +11,7 @@ const ITEMS = [
   { href: "/admin/persona-templates", icon: "ti-id-badge-2", label: "Persona templates" },
   { href: "/admin/report-templates", icon: "ti-file-text", label: "Report templates" },
   { href: "/admin/integrations", icon: "ti-puzzle", label: "Integrations" },
+  { href: "/admin/audit-log", icon: "ti-history", label: "Audit log" },
 ];
 
 export function AdminNav() {
