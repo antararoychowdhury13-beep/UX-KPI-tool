@@ -9,48 +9,48 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* v3 dark palette (spec v3 §3). Token names kept stable so existing components re-theme. */
-  --bg: #0b0d12;
-  --surface: #181a22;   /* cards / panels (v3 --s2) */
-  --surface2: #1e2028;  /* inner surfaces (v3 --s3) */
-  --surface3: #252836;
-  --sidebar: #111318;   /* v3 --s1 — sidebar / topbar */
-  --border: #252836;    /* v3 --b1 */
-  --border2: #2f3245;   /* v3 --b2 */
-  --border3: #3a3f55;   /* v3 --b3 */
-  --text: #eeeef4;      /* v3 --t1 */
-  --text2: #9999b8;     /* v3 --t2 */
-  --text3: #5c5c7a;     /* v3 --t3 */
-  /* dark panels (report hero, test-method bar, persona-engine icon) + accent fg */
-  --accent: #111318;
-  --accentfg: #5b9cf6;
-  /* accent colours — `-light` are translucent tints that read on dark, `-text` is the colour itself */
-  --blue: #5b9cf6;
-  --blue-light: rgba(91, 156, 246, 0.12);
-  --blue-text: #5b9cf6;
-  --green: #22c55e;
-  --green-light: rgba(34, 197, 94, 0.12);
-  --green-text: #22c55e;
-  --red: #ef4444;
-  --red-light: rgba(239, 68, 68, 0.12);
-  --red-text: #ef4444;
-  --amber: #f59e0b;
-  --amber-light: rgba(245, 158, 11, 0.12);
-  --amber-text: #f59e0b;
-  --purple: #a855f7;
-  --purple-light: rgba(168, 85, 247, 0.12);
-  --purple-text: #a855f7;
-  --teal: #14b8a6;
-  --teal-light: rgba(20, 184, 166, 0.12);
-  --teal-text: #14b8a6;
-  --orange: #f97316;
-  --orange-light: rgba(249, 115, 22, 0.12);
-  --yellow: #eab308;
+  /* Light palette (v3 typography on a light surface). Token names stable so all components re-theme. */
+  --bg: #f6f7f9;
+  --surface: #ffffff;   /* cards / panels */
+  --surface2: #f1f3f7;  /* inner surfaces */
+  --surface3: #e7eaf0;
+  --sidebar: #ffffff;   /* sidebar / topbar */
+  --border: #e6e8ee;
+  --border2: #d3d8e1;
+  --border3: #b6bccb;
+  --text: #181a22;
+  --text2: #5c6072;
+  --text3: #9298a8;
+  /* dark hero/panels (report hero, test-method bar, persona-engine icon) with a cyan accent fg */
+  --accent: #1a1a2e;
+  --accentfg: #00e5ff;
+  /* accent colours — `-light` are soft tints (chip/selected bg), `-text` is the readable colour */
+  --blue: #2563eb;
+  --blue-light: #dbeafe;
+  --blue-text: #1d4ed8;
+  --green: #16a34a;
+  --green-light: #dcfce7;
+  --green-text: #15803d;
+  --red: #dc2626;
+  --red-light: #fee2e2;
+  --red-text: #b91c1c;
+  --amber: #d97706;
+  --amber-light: #fef3c7;
+  --amber-text: #92400e;
+  --purple: #7c3aed;
+  --purple-light: #ede9fe;
+  --purple-text: #5b21b6;
+  --teal: #0d9488;
+  --teal-light: #cffafe;
+  --teal-text: #0f766e;
+  --orange: #ea580c;
+  --orange-light: #ffedd5;
+  --yellow: #ca8a04;
   --r: 6px;
   --rl: 10px;
   --rxl: 14px;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.1);
 }
 
 body {
@@ -106,7 +106,7 @@ body {
   .crumb b { color: var(--text2); font-weight: 400; }
   .tb-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--r); border: 1px solid var(--border2); background: transparent; color: var(--text2); font-size: 12px; font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer; transition: all .15s; white-space: nowrap; }
   .tb-btn:hover { background: var(--surface2); color: var(--text); }
-  .tb-btn.primary { background: var(--blue); color: #0b0d12; border-color: transparent; font-weight: 600; }
+  .tb-btn.primary { background: var(--blue); color: #fff; border-color: transparent; font-weight: 600; }
   .tb-btn.primary:hover { background: #74aaff; }
   .tb-btn:disabled { opacity: .5; cursor: not-allowed; }
   .tb-btn i { font-size: 14px; }
@@ -527,11 +527,11 @@ body {
   .fc.sel .fc-icon, .fc.sel .fc-title { color: var(--blue); }
   .fc-ck { position: absolute; top: 9px; right: 9px; width: 14px; height: 14px; border-radius: 50%; background: var(--blue); display: none; align-items: center; justify-content: center; }
   .fc.sel .fc-ck { display: flex; }
-  .fc-ck i { font-size: 9px; color: #0b0d12; }
+  .fc-ck i { font-size: 9px; color: #fff; }
   .fc-icon { font-size: 20px; color: var(--text3); margin-bottom: 7px; display: block; }
   .fc-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
   .fc-desc { font-size: 10px; color: var(--text3); line-height: 1.5; }
-  .fc-tag { display: inline-block; font-size: 9px; padding: 2px 6px; border-radius: 5px; margin-top: 6px; font-family: "JetBrains Mono", monospace; background: rgba(255,255,255,.04); color: var(--text3); border: 1px solid var(--border); }
+  .fc-tag { display: inline-block; font-size: 9px; padding: 2px 6px; border-radius: 5px; margin-top: 6px; font-family: "JetBrains Mono", monospace; background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
 
   /* model panel */
   .model-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); overflow: hidden; }
@@ -586,7 +586,7 @@ body {
   .method-filter { display: flex; gap: 5px; margin-bottom: 12px; flex-wrap: wrap; }
   .mft { padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text3); font-size: 10px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all .1s; }
   .mft:hover { border-color: var(--border2); color: var(--text2); }
-  .mft.active { background: var(--blue); color: #0b0d12; border-color: transparent; }
+  .mft.active { background: var(--blue); color: #fff; border-color: transparent; }
   .te-method-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 16px; }
   .mc { text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 12px; cursor: pointer; transition: all .12s; position: relative; overflow: hidden; font-family: inherit; }
   .mc::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--border); transition: background .12s; }
@@ -595,14 +595,14 @@ body {
   .mc.sel::before { background: var(--blue); }
   .mc-ck { position: absolute; top: 7px; right: 7px; width: 13px; height: 13px; border-radius: 50%; background: var(--blue); display: none; align-items: center; justify-content: center; }
   .mc.sel .mc-ck { display: flex; }
-  .mc-ck i { font-size: 8px; color: #0b0d12; }
+  .mc-ck i { font-size: 8px; color: #fff; }
   .mc-n { font-size: 9px; font-family: "JetBrains Mono", monospace; color: var(--text3); margin-bottom: 5px; }
   .mc-icon { font-size: 17px; color: var(--text3); margin-bottom: 5px; display: block; }
   .mc.sel .mc-icon, .mc.sel .mc-title { color: var(--blue); }
   .mc-title { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 2px; line-height: 1.3; }
   .mc-desc { font-size: 10px; color: var(--text3); line-height: 1.4; }
   .mc-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
-  .mc-tag { font-size: 8px; padding: 1px 5px; border-radius: 4px; font-family: "JetBrains Mono", monospace; background: rgba(255,255,255,.04); color: var(--text3); border: 1px solid var(--border); }
+  .mc-tag { font-size: 8px; padding: 1px 5px; border-radius: 4px; font-family: "JetBrains Mono", monospace; background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
   .mc-model-row { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
   .mc-mdot { width: 5px; height: 5px; border-radius: 50%; }
   .mc-mname { font-size: 9px; font-family: "JetBrains Mono", monospace; color: var(--text3); }
@@ -645,7 +645,7 @@ body {
   .sg-empty { padding: 16px 0; text-align: center; font-size: 11px; color: var(--text3); }
   .gs { display: flex; gap: 10px; padding: 8px 6px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; border-radius: var(--r); }
   .gs:last-child { border-bottom: none; }
-  .gs:hover { background: rgba(255,255,255,.02); }
+  .gs:hover { background: var(--surface2); }
   .gs-left { display: flex; flex-direction: column; align-items: center; width: 20px; flex-shrink: 0; }
   .gs-num { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: "JetBrains Mono", monospace; }
   .gsn-todo { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
