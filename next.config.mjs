@@ -2,8 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    // Sharp and node-only deps used by API routes / workers should not be bundled for the client.
-    serverComponentsExternalPackages: ["sharp", "bullmq", "ioredis"],
+    // Node-only / native deps must not be bundled (esp. for the Cloudflare Workers/OpenNext build).
+    // Puppeteer (Chromium) and ioredis/bullmq (TCP) can't run on Workers — kept external and
+    // imported dynamically so they only load on a Node host.
+    serverComponentsExternalPackages: ["puppeteer", "bullmq", "ioredis"],
   },
   images: {
     // Supabase Storage public URLs will be added here when wiring real storage.

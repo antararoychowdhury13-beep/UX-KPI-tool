@@ -17,7 +17,18 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unknown report" }, { status: 404 });
   }
 
-  const puppeteer = (await import("puppeteer")).default;
+  // Puppeteer (bundled Chromium) only runs on a Node host. On Cloudflare Workers the import fails;
+  // return 501 so the client falls back to the browser print dialog.
+  let puppeteer;
+  try {
+    puppeteer = (await import("puppeteer")).default;
+  } catch {
+    return NextResponse.json(
+      { error: "Server-side PDF export is unavailable on this host. Use the browser print dialog." },
+      { status: 501 },
+    );
+  }
+
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],

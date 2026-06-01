@@ -1,0 +1,8 @@
+# Local secrets for `wrangler dev` / OpenNext preview (copy to .dev.vars — gitignored).
+# NEXT_PUBLIC_* are read from .env/.env.local at build time; these are the server-only secrets.
+SUPABASE_SERVICE_ROLE_KEY=
+ANTHROPIC_API_KEY=
+GOOGLE_GEMINI_API_KEY=
+QWEN_API_KEY=
+# Note: Puppeteer PDF export and the BullMQ/Redis worker do NOT run on Workers — the app
+# degrades gracefully (client-side print; inline synchronous analysis).

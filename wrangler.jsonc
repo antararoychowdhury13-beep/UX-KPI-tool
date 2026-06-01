@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ux-kpi-tool",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": { "enabled": true }
+  // Secrets (set with `wrangler secret put NAME` or in the dashboard — NEVER commit them):
+  //   SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY, GOOGLE_GEMINI_API_KEY, QWEN_API_KEY
+  // Public/build-time vars come from .env / the build; NEXT_PUBLIC_* are inlined at build.
+}

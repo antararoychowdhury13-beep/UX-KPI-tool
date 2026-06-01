@@ -38,8 +38,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const jobId = await enqueueAnalysis(projectId);
+  const { jobId, status } = await enqueueAnalysis(projectId);
   await incrementQuotaUsed(userId);
   await logApiUsage({ user_id: userId, service: "gemini", endpoint: "/api/analyze", status: "success" });
-  return NextResponse.json({ jobId }, { status: 202 });
+  return NextResponse.json({ jobId, status }, { status: 202 });
 }

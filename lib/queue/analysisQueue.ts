@@ -2,13 +2,20 @@
 // With Redis (Upstash) configured this enqueues a BullMQ job; in mock/local mode it processes
 // inline so the app works end-to-end without a queue.
 import { hasRedis } from "@/lib/config";
-import { createJob } from "@/lib/db";
+import { createJob, getJob } from "@/lib/db";
 import { processAnalysis } from "@/lib/queue/workers/analyzeScreenshots";
 
 export const ANALYSIS_QUEUE = "analysis";
 
-/** Queue (or inline-run) an analysis job for a project. Returns the job id to poll. */
-export async function enqueueAnalysis(projectId: string): Promise<string> {
+export interface EnqueueResult {
+  jobId: string;
+  /** Job status after enqueue: "completed"/"failed" for inline runs, "queued" when handed to BullMQ. */
+  status: "queued" | "completed" | "failed";
+}
+
+/** Queue or inline-run an analysis. Inline runs are AWAITED so they complete within the request
+ *  (required on serverless/edge where the in-memory job store doesn't survive across requests). */
+export async function enqueueAnalysis(projectId: string): Promise<EnqueueResult> {
   const job = createJob(projectId);
 
   if (hasRedis) {
@@ -19,11 +26,11 @@ export async function enqueueAnalysis(projectId: string): Promise<string> {
       connection: { url: process.env.UPSTASH_REDIS_REST_URL! },
     });
     await queue.add("analyze", { projectId, jobId: job.id });
-  } else {
-    // Inline processing for local/mock mode. Fire-and-forget so the route can return the job id;
-    // the client polls GET /api/analyze/[job_id]. In a single dev process the store is shared.
-    void processAnalysis(projectId, job.id);
+    return { jobId: job.id, status: "queued" };
   }
 
-  return job.id;
+  // Inline: run to completion before returning so the result is ready immediately.
+  await processAnalysis(projectId, job.id);
+  const finished = getJob(job.id);
+  return { jobId: job.id, status: finished?.status === "failed" ? "failed" : "completed" };
 }

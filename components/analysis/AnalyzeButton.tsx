@@ -31,6 +31,18 @@ export function AnalyzeButton({
       return;
     }
 
+    // Inline runs (no external queue) finish synchronously — proceed without polling.
+    if (data.status === "completed") {
+      router.refresh();
+      router.push(nextHref);
+      return;
+    }
+    if (data.status === "failed") {
+      setError("Analysis failed");
+      setStatus(null);
+      return;
+    }
+
     const jobId = data.jobId as string;
     for (let i = 0; i < 30; i++) {
       await new Promise((r) => setTimeout(r, 500));
