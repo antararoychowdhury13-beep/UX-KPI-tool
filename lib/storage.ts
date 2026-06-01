@@ -37,6 +37,14 @@ export async function uploadScreenshot(
   return path;
 }
 
+/** Signed, time-limited URL for displaying a private screenshot; null in mock mode / on error. */
+export async function signedScreenshotUrl(path: string, expiresIn = 3600): Promise<string | null> {
+  if (!hasSupabase || !path || path.startsWith("mock://")) return null;
+  const { data, error } = await sb().storage.from(SCREENSHOTS).createSignedUrl(path, expiresIn);
+  if (error || !data) return null;
+  return data.signedUrl;
+}
+
 /** Download a screenshot as base64 for the vision model; null if unavailable/mock. */
 export async function downloadScreenshotBase64(
   path: string,

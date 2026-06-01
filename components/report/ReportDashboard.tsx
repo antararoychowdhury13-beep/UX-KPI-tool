@@ -19,6 +19,8 @@ export function ReportDashboard({
   reportId,
   annotations,
   version = 1,
+  beforeImage,
+  afterImage,
   editable = false,
 }: {
   project: Project;
@@ -31,6 +33,8 @@ export function ReportDashboard({
   reportId?: string;
   annotations?: AnnotationMap;
   version?: number;
+  beforeImage?: string | null;
+  afterImage?: string | null;
   editable?: boolean;
 }) {
   // Prefer the composite UX score; fall back to a KPI average (works pre-migration 0004).
@@ -87,7 +91,7 @@ export function ReportDashboard({
             <i className="ti ti-layout-columns" /> Screen comparison
           </div>
           {editable && reportId ? (
-            <AnnotatedComparison reportId={reportId} initial={annotations ?? {}} />
+            <AnnotatedComparison reportId={reportId} initial={annotations ?? {}} beforeImage={beforeImage} afterImage={afterImage} />
           ) : (
             <div className="report-grid" style={{ marginBottom: 0, gap: 8 }}>
               <ScreenThumb
@@ -95,12 +99,14 @@ export function ReportDashboard({
                 tone="before"
                 text={analysis?.before_summary}
                 steps={analysis?.flow_diff?.total_steps_before}
+                image={beforeImage}
               />
               <ScreenThumb
                 label="After"
                 tone="after"
                 text={analysis?.after_summary}
                 steps={analysis?.flow_diff?.total_steps_after}
+                image={afterImage}
               />
             </div>
           )}
@@ -177,11 +183,13 @@ function ScreenThumb({
   tone,
   text,
   steps,
+  image,
 }: {
   label: string;
   tone: "before" | "after";
   text?: string | null;
   steps?: number;
+  image?: string | null;
 }) {
   const after = tone === "after";
   return (
@@ -189,23 +197,28 @@ function ScreenThumb({
       <div style={{ fontSize: 9, color: "var(--text3)", textAlign: "center", padding: "3px 6px", background: "var(--surface2)" }}>
         {label}{typeof steps === "number" ? ` · ${steps} steps` : ""}
       </div>
-      <div
-        style={{
-          height: 92,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexDirection: "column",
-          gap: 4,
-          padding: 8,
-          background: after ? "linear-gradient(135deg,#c5dcf5,#a8c8ee)" : "linear-gradient(135deg,#e0e0e0,#c8c8c8)",
-        }}
-      >
-        <i className="ti ti-layout-dashboard" style={{ fontSize: 18, color: after ? "var(--blue-text)" : "#888" }} />
-        <div style={{ fontSize: 9, color: after ? "var(--blue-text)" : "#777", textAlign: "center", lineHeight: 1.3 }}>
-          {text ? truncate(text, 70) : after ? "Redesigned flow" : "Legacy flow"}
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt={`${label} screen`} style={{ width: "100%", height: 110, objectFit: "cover", display: "block" }} />
+      ) : (
+        <div
+          style={{
+            height: 92,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: 4,
+            padding: 8,
+            background: after ? "linear-gradient(135deg,#c5dcf5,#a8c8ee)" : "linear-gradient(135deg,#e0e0e0,#c8c8c8)",
+          }}
+        >
+          <i className="ti ti-layout-dashboard" style={{ fontSize: 18, color: after ? "var(--blue-text)" : "#888" }} />
+          <div style={{ fontSize: 9, color: after ? "var(--blue-text)" : "#777", textAlign: "center", lineHeight: 1.3 }}>
+            {text ? truncate(text, 70) : after ? "Redesigned flow" : "Legacy flow"}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

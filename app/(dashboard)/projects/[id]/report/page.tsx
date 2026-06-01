@@ -6,7 +6,9 @@ import {
   listReportsByProject,
   listPersonas,
   listTestResults,
+  listScreenshots,
 } from "@/lib/db";
+import { signedScreenshotUrl } from "@/lib/storage";
 import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { StepRow } from "@/components/layout/StepRow";
 import { ReportDashboard } from "@/components/report/ReportDashboard";
@@ -25,16 +27,27 @@ export default async function ReportPage({
   if (!project) notFound();
 
   const requestedVersion = searchParams.v ? Number(searchParams.v) : undefined;
-  const [matrix, analysis, report, allReports, allPersonas, testResults] = await Promise.all([
+  const [matrix, analysis, report, allReports, allPersonas, testResults, screenshots] = await Promise.all([
     getKpiMatrixByProject(project.id),
     getLatestAnalysis(project.id),
     getReportByProject(project.id, requestedVersion),
     listReportsByProject(project.id),
     listPersonas(userId, project.id),
     listTestResults(project.id),
+    listScreenshots(project.id),
   ]);
   const personas = allPersonas.filter((p) => p.project_id === project.id);
   const versions = allReports.map((r) => r.version ?? 1);
+
+  // First before / after screenshot (by sequence), signed for private-bucket display.
+  const firstOf = (type: "before" | "after") =>
+    screenshots.filter((s) => s.type === type).sort((a, b) => a.sequence_order - b.sequence_order)[0];
+  const before = firstOf("before");
+  const after = firstOf("after");
+  const [beforeImage, afterImage] = await Promise.all([
+    before ? signedScreenshotUrl(before.file_path) : Promise.resolve(null),
+    after ? signedScreenshotUrl(after.file_path) : Promise.resolve(null),
+  ]);
 
   return (
     <>
@@ -67,6 +80,8 @@ export default async function ReportPage({
             reportId={report.id}
             annotations={report.annotations}
             version={report.version ?? 1}
+            beforeImage={beforeImage}
+            afterImage={afterImage}
             editable
           />
         </>

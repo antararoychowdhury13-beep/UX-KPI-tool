@@ -1,30 +1,58 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Stage, Layer, Rect, Text, Label, Tag } from "react-konva";
+import { useEffect, useRef, useState } from "react";
+import { Stage, Layer, Rect, Text, Label, Tag, Image as KonvaImage } from "react-konva";
 import type Konva from "konva";
 import type { Annotation } from "@/types/report";
 
 const W = 300;
 const H = 168;
 
-// Interactive Konva annotation canvas over a placeholder screen (real images plug in later).
-// Drag to draw rectangle annotations; each gets a numbered marker.
+// Interactive Konva annotation canvas over the real before/after screenshot (falls back to a
+// labelled placeholder when no image is available). Drag to draw rectangle annotations.
 export default function AnnotatedScreen({
   label,
   tone,
   initial,
+  imageUrl,
   onChange,
 }: {
   label: string;
   tone: "before" | "after";
   initial: Annotation[];
+  imageUrl?: string | null;
   onChange: (annotations: Annotation[]) => void;
 }) {
   const [rects, setRects] = useState<Annotation[]>(initial);
   const drawing = useRef<{ x: number; y: number } | null>(null);
   const after = tone === "after";
   const bg = after ? "#bcd6f2" : "#d4d4d0";
+
+  // Load the screenshot into an HTMLImageElement for the Konva <Image>.
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  useEffect(() => {
+    if (!imageUrl) {
+      setImg(null);
+      return;
+    }
+    const im = new window.Image();
+    im.src = imageUrl;
+    im.onload = () => setImg(im);
+    im.onerror = () => setImg(null);
+    return () => {
+      im.onload = null;
+      im.onerror = null;
+    };
+  }, [imageUrl]);
+
+  // Cover-fit the image within the canvas (overflow is clipped by the canvas element).
+  let imgProps: { x: number; y: number; width: number; height: number } | null = null;
+  if (img) {
+    const scale = Math.max(W / img.width, H / img.height);
+    const dw = img.width * scale;
+    const dh = img.height * scale;
+    imgProps = { x: (W - dw) / 2, y: (H - dh) / 2, width: dw, height: dh };
+  }
 
   function pos(e: Konva.KonvaEventObject<MouseEvent>) {
     const p = e.target.getStage()?.getPointerPosition();
@@ -81,17 +109,23 @@ export default function AnnotatedScreen({
       <div style={{ borderRadius: 6, overflow: "hidden", border: "1px solid var(--border)", width: W }}>
         <Stage width={W} height={H} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} style={{ cursor: "crosshair" }}>
           <Layer>
-            <Rect x={0} y={0} width={W} height={H} fill={bg} />
-            <Text
-              x={0}
-              y={H / 2 - 8}
-              width={W}
-              align="center"
-              text={after ? "Redesigned flow" : "Legacy flow"}
-              fontSize={11}
-              fill={after ? "#185fa5" : "#777"}
-              fontFamily="DM Sans"
-            />
+            {imgProps ? (
+              <KonvaImage image={img!} x={imgProps.x} y={imgProps.y} width={imgProps.width} height={imgProps.height} />
+            ) : (
+              <>
+                <Rect x={0} y={0} width={W} height={H} fill={bg} />
+                <Text
+                  x={0}
+                  y={H / 2 - 8}
+                  width={W}
+                  align="center"
+                  text={after ? "Redesigned flow" : "Legacy flow"}
+                  fontSize={11}
+                  fill={after ? "#185fa5" : "#777"}
+                  fontFamily="Instrument Sans"
+                />
+              </>
+            )}
             {rects.map((a, i) => (
               <Rect
                 key={a.id}

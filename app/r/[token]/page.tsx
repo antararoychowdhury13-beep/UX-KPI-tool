@@ -6,7 +6,9 @@ import {
   getLatestAnalysis,
   listPersonas,
   listTestResults,
+  listScreenshots,
 } from "@/lib/db";
+import { signedScreenshotUrl } from "@/lib/storage";
 import { ReportDashboard } from "@/components/report/ReportDashboard";
 
 // Public, no-login report view (acceptance: share link works without login).
@@ -25,6 +27,16 @@ export default async function PublicReportPage({ params }: { params: { token: st
   );
   const testResults = await listTestResults(report.project_id);
 
+  const screenshots = await listScreenshots(report.project_id);
+  const firstOf = (type: "before" | "after") =>
+    screenshots.filter((s) => s.type === type).sort((a, b) => a.sequence_order - b.sequence_order)[0];
+  const before = firstOf("before");
+  const after = firstOf("after");
+  const [beforeImage, afterImage] = await Promise.all([
+    before ? signedScreenshotUrl(before.file_path) : Promise.resolve(null),
+    after ? signedScreenshotUrl(after.file_path) : Promise.resolve(null),
+  ]);
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
       <header style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
@@ -41,6 +53,9 @@ export default async function PublicReportPage({ params }: { params: { token: st
           testResults={testResults}
           generatedAt={report.created_at}
           shareToken={report.share_token}
+          version={report.version ?? 1}
+          beforeImage={beforeImage}
+          afterImage={afterImage}
         />
       </main>
     </div>
