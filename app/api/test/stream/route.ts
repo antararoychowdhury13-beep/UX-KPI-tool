@@ -20,9 +20,10 @@ export async function POST(req: Request) {
   const userId = await getCurrentUserIdOrNull();
   if (!userId) return unauthorized();
 
-  const body = await readJson<{ projectId?: string; method?: string }>(req);
+  const body = await readJson<{ projectId?: string; method?: string; model?: string }>(req);
   if (!body) return badRequest("Invalid JSON body");
   const method: TestingMethod = body.method && ALLOWED.includes(body.method) ? body.method : "heuristic";
+  const model = typeof body.model === "string" ? body.model : undefined;
   const project = body.projectId ? await getOwnedProject(body.projectId, userId) : null;
   if (!project) return NextResponse.json({ error: "Unknown project" }, { status: 404 });
 
@@ -57,6 +58,7 @@ export async function POST(req: Request) {
           flowDescription: project.description ?? "",
           keyChanges,
           method,
+          model,
         });
         await addTestResult({
           project_id: project.id,

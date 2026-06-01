@@ -3,6 +3,7 @@
 // deterministic mock output when no provider is configured OR when the provider returns
 // unparseable JSON (small local models can be flaky, so we degrade gracefully).
 import { generateText } from "@/lib/ai/providers";
+import { generateWithModel } from "@/lib/ai/router";
 import { extractJson } from "@/lib/ai/json";
 import { personaGenerationPrompt } from "@/lib/prompts/personaGeneration";
 import { heuristicWalkthroughPrompt } from "@/lib/prompts/heuristicWalkthrough";
@@ -16,9 +17,9 @@ import { TESTING_METHODS, type GeneratedPersona, type SyntheticTestRaw, type Tes
 import type { FlowContext } from "@/types/flow";
 import type { KPIGenerationResult } from "@/types/kpi";
 
-/** Run the active provider and parse JSON; return null to signal "use the mock". */
-async function generateJson<T>(prompt: string): Promise<T | null> {
-  const text = await generateText(prompt);
+/** Run the active provider (or a specific model) and parse JSON; null → "use the mock". */
+async function generateJson<T>(prompt: string, model?: string): Promise<T | null> {
+  const text = model ? await generateWithModel(model, prompt) : await generateText(prompt);
   if (text == null) return null; // no provider configured/enabled
   try {
     return extractJson<T>(text);
@@ -87,6 +88,8 @@ export async function runSyntheticTest(params: {
   flowDescription: string;
   keyChanges: string;
   method?: TestingMethod;
+  /** assigned model id (spec v3) — routes via the model router; falls back to active provider */
+  model?: string;
 }): Promise<SyntheticTestRaw> {
   const method: TestingMethod = params.method ?? "heuristic";
   // Bespoke prompt for the original four methods; generic focus-driven prompt for the rest.
@@ -95,7 +98,7 @@ export async function runSyntheticTest(params: {
   const prompt = builder
     ? builder(params)
     : genericMethodPrompt({ ...params, methodTitle: def?.title ?? method, focus: def?.focus ?? "overall usability" });
-  const result = await generateJson<SyntheticTestRaw>(prompt);
+  const result = await generateJson<SyntheticTestRaw>(prompt, params.model);
   const raw = result && typeof result.task_success_rate === "number" ? result : mockTest(params.flowType, method);
   // Stamp the method so the UI knows which method-specific view to render.
   return { ...raw, testing_method: method };

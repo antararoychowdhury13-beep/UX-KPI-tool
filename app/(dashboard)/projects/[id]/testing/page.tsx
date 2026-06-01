@@ -3,9 +3,8 @@ import { notFound } from "next/navigation";
 import { getLatestAnalysis, listPersonas, listTestResults, listScreenshots } from "@/lib/db";
 import { getCurrentUserId, getOwnedProject } from "@/lib/auth";
 import { StepRow } from "@/components/layout/StepRow";
-import { TestingControls } from "@/components/testing/TestingControls";
+import { TestingEngine } from "@/components/testing/TestingEngine";
 import { TestResultRow } from "@/components/testing/TestResultRow";
-import { activeModelInfo } from "@/lib/ai/providers";
 import {
   TESTING_METHODS,
   type FrictionPoint,
@@ -107,11 +106,12 @@ export default async function TestingPage({ params }: { params: { id: string } }
             </div>
           )}
 
-          <TestingControls
+          <TestingEngine
             projectId={project.id}
-            hasResults={results.length > 0}
+            personaCount={personas.length}
+            screenCount={screenshots.length}
             currentMethod={currentMethod}
-            model={activeModelInfo()}
+            hasResults={results.length > 0}
           />
 
           {tested.length > 0 && (
