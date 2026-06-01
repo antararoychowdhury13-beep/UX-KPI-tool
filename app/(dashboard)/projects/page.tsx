@@ -13,7 +13,7 @@ const FLOW_ICON: Record<string, { icon: string; bg: string; color: string }> = {
 };
 
 export default async function ProjectsPage() {
-  const userId = getCurrentUserId();
+  const userId = await getCurrentUserId();
   const projects = await listProjects(userId);
   const counts = {
     completed: projects.filter((p) => p.status === "completed").length,

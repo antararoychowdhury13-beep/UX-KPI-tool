@@ -9,7 +9,7 @@ export async function createProjectAction(formData: FormData) {
   if (!name) redirect("/projects/new?error=name");
 
   const project = await createProject({
-    user_id: getCurrentUserId(),
+    user_id: await getCurrentUserId(),
     name,
     description: String(formData.get("description") ?? ""),
     flow_type: String(formData.get("flow_type") ?? "custom"),

@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { initials } from "@/lib/utils/initials";
 import { hasSupabase, hasAnthropic, hasGemini, hasHuggingFace, hasRedis } from "@/lib/config";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
@@ -33,9 +34,10 @@ export default async function SettingsPage() {
               <div className="user-role">{user.email}</div>
             </div>
           </div>
-          <div style={{ fontSize: 12, color: "var(--text2)" }}>
+          <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 12 }}>
             Quota: {user.quota_used} / {user.quota_analyses} analyses
           </div>
+          <SignOutButton />
         </div>
 
         <div className="card">

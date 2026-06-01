@@ -19,7 +19,7 @@ export default async function TestingPage({ params }: { params: { id: string } }
   const project = await getProject(params.id);
   if (!project) notFound();
 
-  const userId = getCurrentUserId();
+  const userId = await getCurrentUserId();
   const [analysis, allPersonas, results] = await Promise.all([
     getLatestAnalysis(project.id),
     listPersonas(userId, project.id),

@@ -16,7 +16,7 @@ export default async function ReportPage({ params }: { params: { id: string } })
   const project = await getProject(params.id);
   if (!project) notFound();
 
-  const userId = getCurrentUserId();
+  const userId = await getCurrentUserId();
   const [matrix, analysis, report, allPersonas, testResults] = await Promise.all([
     getKpiMatrixByProject(project.id),
     getLatestAnalysis(project.id),

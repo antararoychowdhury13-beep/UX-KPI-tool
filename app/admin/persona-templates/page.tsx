@@ -4,7 +4,7 @@ import { PersonaCard } from "@/components/persona/PersonaCard";
 
 export default async function AdminPersonaTemplatesPage() {
   // Global templates available to all users (is_template = true).
-  const templates = (await listPersonas(getCurrentUserId())).filter((p) => p.is_template);
+  const templates = (await listPersonas(await getCurrentUserId())).filter((p) => p.is_template);
 
   return (
     <>

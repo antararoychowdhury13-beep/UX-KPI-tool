@@ -49,6 +49,24 @@ export async function getUser(id: string): Promise<User | undefined> {
   return (data as User) ?? undefined;
 }
 
+/** Ensure a public.users row exists for an authenticated user; create it on first login. */
+export async function ensureUser(input: {
+  id: string;
+  email: string;
+  full_name: string;
+}): Promise<User> {
+  const existing = await getUser(input.id);
+  if (existing) return existing;
+  const { data, error } = await sb()
+    .from("users")
+    // New users get admin in this single-tenant demo; tighten to 'user' for multi-tenant.
+    .insert({ id: input.id, email: input.email, full_name: input.full_name, role: "admin", quota_analyses: 10, quota_used: 0 })
+    .select("*")
+    .single();
+  if (error) throw new Error(`ensureUser failed: ${error.message}`);
+  return data as User;
+}
+
 export async function listUsers(): Promise<User[]> {
   return must(await sb().from("users").select("*").order("created_at")) as User[];
 }

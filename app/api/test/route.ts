@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
   }
 
-  const userId = getCurrentUserId();
+  const userId = await getCurrentUserId();
   if (!(await checkRateLimit(userId))) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }

@@ -3,7 +3,7 @@ import { getCurrentUserId } from "@/lib/auth";
 import { PersonaCard } from "@/components/persona/PersonaCard";
 
 export default async function PersonaLibraryPage() {
-  const personas = (await listPersonas(getCurrentUserId())).filter((p) => p.project_id === null);
+  const personas = (await listPersonas(await getCurrentUserId())).filter((p) => p.project_id === null);
 
   return (
     <>

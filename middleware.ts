@@ -1,9 +1,12 @@
-// Pass-through middleware scaffold. Route protection / session refresh is wired in Milestone 1.
+// Refreshes the Supabase session and guards protected routes. In mock mode (no Supabase env),
+// it's a pass-through so the app still runs without auth configured.
 import { NextResponse, type NextRequest } from "next/server";
+import { hasSupabase } from "@/lib/config";
+import { updateSession } from "@/lib/supabase/middleware";
 
-export function middleware(_request: NextRequest) {
-  // TODO (Milestone 1): refresh Supabase session and guard (dashboard) + /admin routes.
-  return NextResponse.next();
+export async function middleware(request: NextRequest) {
+  if (!hasSupabase) return NextResponse.next();
+  return updateSession(request);
 }
 
 export const config = {

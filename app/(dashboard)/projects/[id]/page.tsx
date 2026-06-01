@@ -15,7 +15,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const project = await getProject(params.id);
   if (!project) notFound();
 
-  const userId = getCurrentUserId();
+  const userId = await getCurrentUserId();
   const [screenshots, analysis, allPersonas, kpi, report] = await Promise.all([
     listScreenshots(project.id),
     getLatestAnalysis(project.id),

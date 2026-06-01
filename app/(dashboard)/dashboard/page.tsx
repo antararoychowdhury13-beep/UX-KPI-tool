@@ -26,7 +26,7 @@ function badgeLabel(status: string) {
 }
 
 export default async function DashboardPage() {
-  const userId = getCurrentUserId();
+  const userId = await getCurrentUserId();
   const user = await getCurrentUser();
   const projects = await listProjects(userId);
   const analysesRun = projects.filter((p) => p.status === "completed").length;
