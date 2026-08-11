@@ -67,7 +67,7 @@ export default async function TestingPage({ params }: { params: { id: string } }
           <div className="section-title">Synthetic usability testing</div>
           <div className="section-sub">
             {results.length > 0 ? `${methodLabel} · ` : ""}
-            AI-simulated testing across {personas.length} personas · {project.name}
+            Measured simulation panels across {personas.length} personas · {project.name}
           </div>
         </div>
         <div style={{ display: "flex", gap: 7, alignItems: "center" }}>

@@ -5,7 +5,12 @@ visual and workflow differences with AI, generates synthetic personas, runs simu
 testing, and produces a visual report with KPI predictions and confidence scores — no real user
 research data required.
 
-> **Status:** Milestone 1 — Core MVP (mock-first). The full flow works end-to-end locally with
+> **Status:** Milestone 4 + measured engine (v4). Synthetic testing now runs on the **SynthUX
+> measured engine** (`lib/synthux`): every persona expands into a panel of simulated participants,
+> and every reported number — task success, confidence intervals, friction severity — is *measured*
+> from those sessions rather than estimated by a single model prompt. Results are deterministic per
+> persona/flow, so before/after deltas are attributable to the design change. The full flow works
+> end-to-end locally with
 > **zero keys**: create project → upload screenshots → analyze → generate personas → synthetic
 > testing → KPI matrix → shareable report. Each external service (Supabase, Redis, Claude, Gemini,
 > HuggingFace) runs live when its env vars are present and falls back to an in-memory/canned mock
@@ -72,6 +77,14 @@ Milestone breakdown:
 
 Everything currently runs **mock-first** — add the env vars in `.env.example` to switch each
 service to live.
+
+## Deploying to Cloudflare (auto-deploy)
+
+`.github/workflows/deploy.yml` deploys on every push to `main` once two repository secrets exist
+(Settings → Secrets and variables → Actions): `CLOUDFLARE_API_TOKEN` (dashboard → My Profile →
+API Tokens → "Edit Cloudflare Workers" template) and `CLOUDFLARE_ACCOUNT_ID` (dashboard →
+Workers & Pages → right sidebar). Without the secrets the job skips cleanly. Manual deploys:
+see `CLOUDFLARE.md`. The app goes live at `https://ux-kpi-tool.<your-subdomain>.workers.dev`.
 
 ## Notes
 

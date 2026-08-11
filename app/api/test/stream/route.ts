@@ -1,8 +1,12 @@
 // POST /api/test/stream — run synthetic testing and stream per-persona progress over SSE
 // (spec v2 §5). Same work as /api/test, but emits a step event as each persona/flow completes.
+//
+// v4: results come from the SynthUX measured engine (lib/synthux) — each persona is
+// expanded into a simulated participant panel and every number is measured from those
+// sessions, replacing the earlier single-prompt model estimate.
 import { NextResponse } from "next/server";
-import { getLatestAnalysis, listPersonas, addTestResult, logApiUsage, createNotification } from "@/lib/db";
-import { runSyntheticTest } from "@/lib/ai/claude";
+import { getLatestAnalysis, listPersonas, listScreenshots, addTestResult, logApiUsage, createNotification } from "@/lib/db";
+import { runMeasuredTest } from "@/lib/synthux";
 import { resolveTextProvider } from "@/lib/ai/providers";
 import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
@@ -32,7 +36,10 @@ export async function POST(req: Request) {
   }
 
   const analysis = await getLatestAnalysis(project.id);
-  const keyChanges = JSON.stringify(analysis?.flow_diff?.key_changes ?? []);
+  const keyChanges: string[] = (analysis?.flow_diff?.key_changes ?? []).map((c: unknown) =>
+    typeof c === "string" ? c : JSON.stringify(c),
+  );
+  const screenshots = await listScreenshots(project.id);
   const personas = (await listPersonas(userId, project.id)).filter((p) => p.project_id === project.id);
   if (personas.length === 0) {
     return NextResponse.json({ error: "Generate personas before running tests" }, { status: 400 });
@@ -47,18 +54,19 @@ export async function POST(req: Request) {
       for (const flowType of flows) {
         emit({
           type: "step",
-          label: `Evaluating ${persona.name} — ${flowType} flow`,
+          label: `Simulating panel for ${persona.name} — ${flowType} flow`,
           progress: Math.round((done / total) * 100),
           detail: persona.name,
         });
-        const raw = await runSyntheticTest({
-          personaJson: JSON.stringify(persona),
-          personaName: persona.name,
+        // `model` is kept for the future live-perception path; the measured
+        // engine itself is deterministic and model-free.
+        void model;
+        const raw = runMeasuredTest({
+          persona,
           flowType,
-          flowDescription: project.description ?? "",
           keyChanges,
           method,
-          model,
+          screenCount: screenshots.filter((s) => s.type === flowType).length,
         });
         await addTestResult({
           project_id: project.id,
