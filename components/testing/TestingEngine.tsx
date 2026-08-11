@@ -228,7 +228,7 @@ export function TestingEngine({
       <div className="model-panel">
         <div className="mp-header">
           <div className="mp-title"><i className="ti ti-cpu" /> Model per evaluation step — click any to change</div>
-          <div className="mp-formula">UX Score = Σ(score × weight) / Σ(weights)</div>
+          <div className="mp-formula">KPIs measured from simulated sessions — never model-rated</div>
         </div>
         <div className="mp-body">
           <div className="te-model-grid">
@@ -280,9 +280,9 @@ export function TestingEngine({
             })}
           </div>
           <div className="formula-bar">
-            <div className="fb-label">Composite UX Score Formula</div>
-            <span className="fv-c">UX_Score</span> = <span className="fv-g">Σ</span>(<span className="fv-a">method_score_i</span> × <span className="fv-p">weight_i</span>) / <span className="fv-g">Σ</span>(<span className="fv-p">weight_i</span>) × 10<br />
-            Delta: <span className="fv-c">UX_After</span> − <span className="fv-c">UX_Before</span> · Cache: input hash → 24h TTL → skip duplicate AI calls
+            <div className="fb-label">How the numbers are computed</div>
+            <span className="fv-c">task_success</span> = completions / participants, with <span className="fv-g">Wilson 95% CI</span><br />
+            <span className="fv-c">severity</span> = <span className="fv-a">frequency</span>^0.7 × <span className="fv-p">impact</span> — measured from panel sessions, not opinion · Delta: <span className="fv-c">UX_After</span> − <span className="fv-c">UX_Before</span>
           </div>
         </div>
       </div>

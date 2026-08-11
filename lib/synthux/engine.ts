@@ -107,21 +107,24 @@ export function deriveBehaviour(persona: Persona): BehaviourProfile {
 /** Hazards are the flow's difficulty parameters; outcomes are measured from
  * sessions run against them. The "after" flow earns hazard reductions from the
  * analysis's key_changes — more (and clearer) changes, lower hazards. */
-interface FlowHazards {
+export interface FlowHazards {
   optimalSteps: number;
   comprehension: number; // chance the critical label/copy is misread
   wrongTurn: number;     // per-step chance of entering the wrong area
   feedbackGap: number;   // chance of a silent "declared done but wasn't"
 }
 
-function deriveHazards(flowType: "before" | "after", keyChanges: string[], screenCount: number): FlowHazards {
+export function deriveHazards(flowType: "before" | "after", keyChanges: string[], screenCount: number): FlowHazards {
   const optimalSteps = Math.max(3, Math.min(8, screenCount || 4 + Math.min(2, keyChanges.length)));
   const base: FlowHazards = { optimalSteps, comprehension: 0.42, wrongTurn: 0.2, feedbackGap: 0.08 };
   if (flowType === "before") return base;
   const text = keyChanges.join(" ").toLowerCase();
-  const labelFix = /rename|label|word|copy|terminolog|clarif/.test(text) ? 0.55 : 0.3;
-  const navFix = /nav|menu|reorganis|restructur|simplif|consolidat|flow/.test(text) ? 0.5 : 0.25;
-  const fbFix = /feedback|confirm|toast|success|status/.test(text) ? 0.6 : 0.25;
+  // A hazard is reduced ONLY when a documented change addresses it. A redesign
+  // whose key changes are purely visual measures identical to the baseline —
+  // improvement must be earned from evidence, never granted by default.
+  const labelFix = /rename|label|word|copy|terminolog|clarif/.test(text) ? 0.55 : 0;
+  const navFix = /nav|menu|reorganis|restructur|simplif|consolidat|flow/.test(text) ? 0.5 : 0;
+  const fbFix = /feedback|confirm|toast|success|status/.test(text) ? 0.6 : 0;
   const strength = clamp01(keyChanges.length / 5); // more documented changes → fuller effect
   return {
     optimalSteps,
