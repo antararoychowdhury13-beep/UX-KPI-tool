@@ -11,6 +11,11 @@ import {
   type SyntheticTestRaw,
   type SyntheticTestResult,
 } from "@/types/persona";
+import type { SynthuxMeasured } from "@/lib/synthux";
+
+/** Measured-engine payload attached by lib/synthux (absent on legacy results). */
+const measured = (r?: SyntheticTestRaw): SynthuxMeasured | undefined =>
+  (r as (SyntheticTestRaw & { synthux?: SynthuxMeasured }) | undefined)?.synthux;
 
 function frictionCounts(points: FrictionPoint[]) {
   return {
@@ -40,6 +45,7 @@ export function TestResultRow({
   const afterRaw = raw(after);
   const method = afterRaw?.testing_method ?? beforeRaw?.testing_method ?? "heuristic";
   const hasDetail = !!afterRaw && (
+    !!measured(afterRaw) ||
     (method === "heuristic" && !!afterRaw.heuristic_scores) ||
     (method === "task_scenario" && !!afterRaw.task_scenarios_result?.length) ||
     (method === "think_aloud" && !!afterRaw.think_aloud_transcript) ||
@@ -104,6 +110,9 @@ export function TestResultRow({
 
       {open && hasDetail && afterRaw && (
         <div className="test-detail">
+          {measured(afterRaw) && (
+            <MeasuredPanel before={measured(beforeRaw)} after={measured(afterRaw)!} />
+          )}
           {method === "heuristic" && afterRaw.heuristic_scores && (
             <HeuristicGrid before={beforeRaw?.heuristic_scores} after={afterRaw.heuristic_scores} />
           )}
@@ -125,6 +134,46 @@ export function TestResultRow({
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** Panel-measured evidence: outcome counts, CI, journey stats, and the
+ * representative transcript — all counted from simulated sessions, never
+ * model-estimated. */
+function MeasuredPanel({ before, after }: { before?: SynthuxMeasured; after: SynthuxMeasured }) {
+  const o = after.outcomes;
+  const ci = after.success_ci;
+  return (
+    <div className="detail-block">
+      <div className="detail-title">
+        Measured from {after.participants} simulated participants — after flow
+        <span className="detail-meta">
+          95% CI {pct(ci[0])}–{pct(ci[1])}%
+          {before ? ` · before: ${pct(before.success_ci[0])}–${pct(before.success_ci[1])}%` : ""}
+        </span>
+      </div>
+      <div className="quote-chips" style={{ marginBottom: 8 }}>
+        <span className="quote-chip">✓ {o.success} completed</span>
+        {o.partial > 0 && <span className="quote-chip">◐ {o.partial} partial</span>}
+        {o.failure > 0 && <span className="quote-chip">✗ {o.failure} thought done (weren't)</span>}
+        {o.abandoned > 0 && <span className="quote-chip">⊘ {o.abandoned} gave up</span>}
+        <span className="quote-chip">
+          {after.median_actions} actions (optimal {after.optimal_actions})
+        </span>
+        <span className="quote-chip">{pct(after.backtrack_rate)}% backtracked</span>
+        {after.help_rate > 0 && <span className="quote-chip">{pct(after.help_rate)}% needed Help</span>}
+      </div>
+      {after.representative_transcript.length > 0 && (
+        <>
+          <div className="detail-title" style={{ marginTop: 6 }}>Representative session</div>
+          <p className="transcript">
+            {after.representative_transcript
+              .map((s) => `[${s.phase}] "${s.said}" (${pct(s.confidence)}%)`)
+              .join("\n")}
+          </p>
+        </>
       )}
     </div>
   );

@@ -4,11 +4,12 @@ import { NextResponse } from "next/server";
 import {
   getLatestAnalysis,
   listPersonas,
+  listScreenshots,
   addTestResult,
   logApiUsage,
   createNotification,
 } from "@/lib/db";
-import { runSyntheticTest } from "@/lib/ai/claude";
+import { runMeasuredTest } from "@/lib/synthux";
 import { resolveTextProvider } from "@/lib/ai/providers";
 import { getCurrentUserIdOrNull, getOwnedProject } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/utils/rateLimiter";
@@ -37,7 +38,10 @@ export async function POST(req: Request) {
   }
 
   const analysis = await getLatestAnalysis(project.id);
-  const keyChanges = JSON.stringify(analysis?.flow_diff?.key_changes ?? []);
+  const keyChanges: string[] = (analysis?.flow_diff?.key_changes ?? []).map((c: unknown) =>
+    typeof c === "string" ? c : JSON.stringify(c),
+  );
+  const screenshots = await listScreenshots(project.id);
   const personas = (await listPersonas(userId, project.id)).filter(
     (p) => p.project_id === project.id,
   );
@@ -52,13 +56,12 @@ export async function POST(req: Request) {
   const results = [];
   for (const persona of personas) {
     for (const flowType of ["before", "after"] as const) {
-      const raw = await runSyntheticTest({
-        personaJson: JSON.stringify(persona),
-        personaName: persona.name,
+      const raw = runMeasuredTest({
+        persona,
         flowType,
-        flowDescription: project.description ?? "",
         keyChanges,
         method,
+        screenCount: screenshots.filter((s) => s.type === flowType).length,
       });
       results.push(
         await addTestResult({

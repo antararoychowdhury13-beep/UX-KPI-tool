@@ -69,10 +69,19 @@ export async function POST(req: Request) {
 
   const kpis: KPI[] = result.kpis.map((k) => ({ id: uuid(), ...k }));
 
-  // Composite UX score (0-100): use the model's scores when present, else average the KPI scores.
+  // Composite UX score (0-100). MEASURED results win: when synthetic tests ran through the
+  // SynthUX engine, the score is the panel-measured overall_score (0-10 → ×10) averaged per
+  // flow — never a model's opinion. The model estimate remains only as a fallback for
+  // projects with no test results at all.
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
-  const uxBefore = Math.round(result.ux_score_before ?? avg(kpis.map((k) => k.before_score)));
-  const uxAfter = Math.round(result.ux_score_after ?? avg(kpis.map((k) => k.after_score)));
+  const measuredBefore = testResults.filter((r) => r.flow_type === "before").map((r) => r.overall_score);
+  const measuredAfter = testResults.filter((r) => r.flow_type === "after").map((r) => r.overall_score);
+  const uxBefore = measuredBefore.length
+    ? Math.round(avg(measuredBefore) * 10)
+    : Math.round(result.ux_score_before ?? avg(kpis.map((k) => k.before_score)));
+  const uxAfter = measuredAfter.length
+    ? Math.round(avg(measuredAfter) * 10)
+    : Math.round(result.ux_score_after ?? avg(kpis.map((k) => k.after_score)));
 
   const matrix = await createKpiMatrix({
     analysis_id: analysis.id,
