@@ -16,6 +16,18 @@ export interface ScreenAnalysisRaw {
   key_changes: FlowDiff["key_changes"];
   friction_points_removed: string[];
   new_capabilities_added: string[];
+  /** Set on every return path; absent only on legacy records. */
+  provenance?: AnalysisProvenance;
+}
+
+/** Where an analysis actually came from. Never let a failure look like a success. */
+export interface AnalysisProvenance {
+  /** live = a provider read the pixels; mock = canned demo output; failed = provider errored. */
+  status: "live" | "mock" | "failed";
+  provider: string | null;
+  model: string | null;
+  pixels_read: boolean;
+  reason?: string;
 }
 
 export interface InlineImage {
@@ -32,12 +44,26 @@ export async function analyzeScreens(params: {
 }): Promise<ScreenAnalysisRaw> {
   const allImages = [...params.beforeImages, ...params.afterImages];
   const hasRealBytes = allImages.some((img) => img.data && img.data.length > 0);
+  const MODEL = "gemini-1.5-flash";
 
-  // Use the mock unless Gemini is enabled/keyed AND we actually have image bytes to analyze.
-  // (Real screenshot bytes require Supabase Storage; until that's wired, analysis stays mock even
-  // when a key is present.)
-  if (!hasGemini || !isServiceEnabled("gemini") || !hasRealBytes) {
-    return mockAnalysis(params.beforeImages.length, params.afterImages.length);
+  // Every non-live path states WHY, so the UI can never present canned output as analysis.
+  if (!hasGemini) {
+    return mockAnalysis(params.beforeImages.length, params.afterImages.length, {
+      status: "mock", provider: null, model: null, pixels_read: false,
+      reason: "No GOOGLE_GEMINI_API_KEY configured — screens were not inspected.",
+    });
+  }
+  if (!isServiceEnabled("gemini")) {
+    return mockAnalysis(params.beforeImages.length, params.afterImages.length, {
+      status: "mock", provider: "google", model: MODEL, pixels_read: false,
+      reason: "Gemini is disabled in Admin → AI services — screens were not inspected.",
+    });
+  }
+  if (!hasRealBytes) {
+    return mockAnalysis(params.beforeImages.length, params.afterImages.length, {
+      status: "mock", provider: "google", model: MODEL, pixels_read: false,
+      reason: "No screenshot bytes were available to send — screens were not inspected.",
+    });
   }
 
   try {
@@ -65,14 +91,26 @@ export async function analyzeScreens(params: {
     ];
 
     const result = await model.generateContent(parts);
-    return extractJson<ScreenAnalysisRaw>(result.response.text());
-  } catch {
-    // Network/quota/parse failure — degrade gracefully rather than fail the analysis job.
-    return mockAnalysis(params.beforeImages.length, params.afterImages.length);
+    const parsed = extractJson<ScreenAnalysisRaw>(result.response.text());
+    return {
+      ...parsed,
+      provenance: { status: "live", provider: "google", model: MODEL, pixels_read: true },
+    };
+  } catch (e) {
+    // A provider failure must NOT look like a successful analysis: the canned content
+    // still renders so the pipeline continues, but it is flagged `failed` with the cause.
+    return mockAnalysis(params.beforeImages.length, params.afterImages.length, {
+      status: "failed", provider: "google", model: MODEL, pixels_read: false,
+      reason: `Vision provider call failed: ${e instanceof Error ? e.message : String(e)}`,
+    });
   }
 }
 
-function mockAnalysis(beforeCount: number, afterCount: number): ScreenAnalysisRaw {
+function mockAnalysis(
+  beforeCount: number,
+  afterCount: number,
+  provenance: AnalysisProvenance,
+): ScreenAnalysisRaw {
   return {
     before_flow_summary:
       "The legacy flow spans several dense screens with multi-field forms and validation deferred to submit.",
@@ -106,5 +144,6 @@ function mockAnalysis(beforeCount: number, afterCount: number): ScreenAnalysisRa
       "Redundant confirmation step",
     ],
     new_capabilities_added: ["Inline validation", "Progress indicator"],
+    provenance,
   };
 }
