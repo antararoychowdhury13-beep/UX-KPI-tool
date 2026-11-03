@@ -6,6 +6,15 @@ import { hasSupabase } from "@/lib/config";
 const SCREENSHOTS = "project-screenshots";
 const REPORTS = "reports";
 
+/**
+ * Mock-mode blob store. Without Supabase we used to throw uploaded bytes away,
+ * which silently made real vision analysis impossible even with a provider key
+ * configured. Bytes now live here for the process lifetime so the vision path is
+ * reachable in demo mode. Not durable: cleared on restart, single-process only.
+ */
+const memoryBlobs = new Map<string, { bytes: Uint8Array; contentType: string }>();
+const MAX_MEMORY_BLOBS = 200;
+
 let client: SupabaseClient | null = null;
 function sb(): SupabaseClient {
   if (!client) {
@@ -31,7 +40,15 @@ export async function uploadScreenshot(
   contentType: string,
 ): Promise<string> {
   const path = `${projectId}/${type}/${String(seq).padStart(2, "0")}-${fileName}`;
-  if (!hasSupabase) return `mock://${SCREENSHOTS}/${path}`;
+  if (!hasSupabase) {
+    const mockPath = `mock://${SCREENSHOTS}/${path}`;
+    if (memoryBlobs.size >= MAX_MEMORY_BLOBS) {
+      const oldest = memoryBlobs.keys().next().value;
+      if (oldest) memoryBlobs.delete(oldest);
+    }
+    memoryBlobs.set(mockPath, { bytes, contentType });
+    return mockPath;
+  }
   const { error } = await sb().storage.from(SCREENSHOTS).upload(path, bytes, { contentType, upsert: true });
   if (error) throw new Error(`Storage upload failed: ${error.message}`);
   return path;
@@ -59,7 +76,15 @@ export async function signedScreenshotUrl(path: string, expiresIn = 3600): Promi
 export async function downloadScreenshotBase64(
   path: string,
 ): Promise<{ data: string; mimeType: string } | null> {
-  if (!hasSupabase || path.startsWith("mock://")) return null;
+  if (path.startsWith("mock://")) {
+    const blob = memoryBlobs.get(path);
+    if (!blob) return null;
+    return {
+      data: Buffer.from(blob.bytes).toString("base64"),
+      mimeType: blob.contentType || "image/png",
+    };
+  }
+  if (!hasSupabase) return null;
   const { data, error } = await sb().storage.from(SCREENSHOTS).download(path);
   if (error || !data) return null;
   const buf = Buffer.from(await data.arrayBuffer());

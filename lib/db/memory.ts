@@ -165,8 +165,8 @@ function seedDemo(store: Store): void {
   const project: Project = {
     id: uuid(),
     user_id: MOCK_USER_ID,
-    name: "HMC Dashboard Revamp",
-    description: "IBM Power HMC · React migration — consolidating action menus into a unified command bar",
+    name: "HMC Dashboard Revamp (demo data)",
+    description: "SEEDED SAMPLE — the personas, test results and KPI figures in this project are illustrative demo data, not the output of a run. Create a new project to test your own screens.",
     flow_type: "dashboard",
     status: "completed",
     created_at: now(),

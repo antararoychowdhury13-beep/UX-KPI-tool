@@ -45,6 +45,7 @@ export async function processAnalysis(
     });
 
     const flow_diff: FlowDiff = {
+      provenance: raw.provenance,
       total_steps_before: raw.total_steps_before,
       total_steps_after: raw.total_steps_after,
       key_changes: raw.key_changes,

@@ -148,9 +148,9 @@ function MeasuredPanel({ before, after }: { before?: SynthuxMeasured; after: Syn
   return (
     <div className="detail-block">
       <div className="detail-title">
-        Measured from {after.participants} simulated participants — after flow
+        Simulated panel — {after.participants} participants, after flow (screens not visually inspected)
         <span className="detail-meta">
-          95% CI {pct(ci[0])}–{pct(ci[1])}%
+          95% simulation interval {pct(ci[0])}–{pct(ci[1])}%
           {before ? ` · before: ${pct(before.success_ci[0])}–${pct(before.success_ci[1])}%` : ""}
         </span>
       </div>

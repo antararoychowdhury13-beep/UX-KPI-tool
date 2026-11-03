@@ -246,8 +246,15 @@ const median = (xs: number[]) => {
 };
 
 /** Measured extras persisted inside raw_ai_response for UI drill-downs. */
+export const ENGINE_VERSION = "synthux-engine/2.1";
+
 export interface SynthuxMeasured {
   engine: "synthux-measured";
+  /** Hash of every input that shaped this result; identical inputs reproduce it. */
+  input_fingerprint: string;
+  engine_version: string;
+  /** False whenever the run was driven by described flows rather than inspected pixels. */
+  pixels_inspected: boolean;
   participants: number;
   outcomes: Record<Outcome, number>;
   success_ci: [number, number];
@@ -268,12 +275,30 @@ export interface MeasuredTestParams {
   participants?: number; // panel size expanded from this persona (default 12)
 }
 
+/** Everything that may legitimately change a result, in canonical order. Seeding from
+ *  this (rather than a database id) means identical inputs reproduce identical numbers,
+ *  and any real change to the test moves them. */
+export function studyFingerprint(params: MeasuredTestParams): string {
+  const p = params.persona;
+  return [
+    ENGINE_VERSION,
+    params.flowType,
+    params.method ?? "heuristic",
+    `n:${params.participants ?? 12}`,
+    `screens:${params.screenCount ?? 0}`,
+    `persona:${[p.name, p.age, p.tech_comfort, p.tech_comfort_score, p.experience_years,
+                p.role_level, p.accessibility_profile].join("/")}`,
+    `changes:${[...(params.keyChanges ?? [])].join("|")}`,
+  ].join("||");
+}
+
 export function runMeasuredTest(params: MeasuredTestParams): SyntheticTestRaw & { synthux: SynthuxMeasured } {
   const method: TestingMethod = params.method ?? "heuristic";
   const n = params.participants ?? 12;
   const behaviour = deriveBehaviour(params.persona);
   const hazards = deriveHazards(params.flowType, params.keyChanges, params.screenCount ?? 0);
-  const rng = new RNG(hashSeed(`${params.persona.id}|${params.flowType}|${method}`));
+  const fingerprint = hashSeed(studyFingerprint(params));
+  const rng = new RNG(fingerprint);
 
   const sessions: SimSession[] = [];
   for (let i = 0; i < n; i++) sessions.push(simulateSession(rng, behaviour, hazards));
@@ -335,6 +360,9 @@ export function runMeasuredTest(params: MeasuredTestParams): SyntheticTestRaw & 
 
   const synthux: SynthuxMeasured = {
     engine: "synthux-measured",
+    input_fingerprint: fingerprint.toString(16).padStart(8, "0"),
+    engine_version: ENGINE_VERSION,
+    pixels_inspected: false,
     participants: n,
     outcomes: { success: successes, partial: count("partial"), failure: count("failure"), abandoned },
     success_ci: [Math.round(ci[0] * 1000) / 1000, Math.round(ci[1] * 1000) / 1000],

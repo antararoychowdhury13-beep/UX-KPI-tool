@@ -71,6 +71,14 @@ export interface FlowDiff {
   key_changes: FlowChange[];
   friction_points_removed: string[];
   new_capabilities_added: string[];
+  /** How this diff was produced — live vision, canned mock, or a provider failure. */
+  provenance?: {
+    status: "live" | "mock" | "failed";
+    provider: string | null;
+    model: string | null;
+    pixels_read: boolean;
+    reason?: string;
+  };
 }
 
 export interface Analysis {
